@@ -12,7 +12,9 @@ import { SettingsPanel } from './components/SettingsPanel'
 const App: React.FC = () => {
   const [n, setN] = useState(5)
   const [density, setDensity] = useState(0.7)
-  const [cellSize, setCellSize] = useState(54)
+  const [cellSize, setCellSize] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth < 640 ? 42 : 54,
+  )
   const [matrix, setMatrix] = useState<number[][]>(() => generateMatrix({ n: 5, density: 0.7 }))
   const [currentStep, setCurrentStep] = useState(0)
 
@@ -82,18 +84,10 @@ const App: React.FC = () => {
           zIndex: 20,
         }}
       >
-        <div
-          style={{
-            maxWidth: 1080,
-            margin: '0 auto',
-            padding: '12px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <div className="header-inner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
             <span
+              className="header-logo"
               style={{
                 width: 36,
                 height: 36,
@@ -103,6 +97,7 @@ const App: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 3px 10px rgba(244,63,94,0.35)',
+                flexShrink: 0,
               }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff">
@@ -113,7 +108,7 @@ const App: React.FC = () => {
               <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: -0.3, lineHeight: 1.1 }}>
                 Love Match
               </div>
-              <div style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: 0.4 }}>
+              <div className="header-subtitle" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: 0.4 }}>
                 Greedy Bipartite Matching · Visualized
               </div>
             </div>
@@ -126,6 +121,7 @@ const App: React.FC = () => {
               background: '#f5f5f4',
               padding: '5px 12px',
               borderRadius: 20,
+              flexShrink: 0,
             }}
           >
             {n} × {n} matrix
@@ -134,15 +130,7 @@ const App: React.FC = () => {
       </header>
 
       {/* ---------- main ---------- */}
-      <main
-        style={{
-          maxWidth: 1080,
-          width: '100%',
-          margin: '0 auto',
-          padding: '20px 24px 130px',
-          flex: 1,
-        }}
-      >
+      <main className="app-main">
         <StepInfo
           type={step.type}
           phaseTitle={step.phaseTitle}
@@ -150,34 +138,14 @@ const App: React.FC = () => {
           totalScore={step.totalScore}
         />
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0,1fr) 280px',
-            gap: 16,
-            marginTop: 16,
-            alignItems: 'start',
-          }}
-        >
+        <div className="layout-grid">
           {/* matrix card */}
-          <div
-            style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--line)',
-              borderRadius: 20,
-              padding: '20px 16px',
-              boxShadow: '0 1px 3px rgba(28,25,23,0.05)',
-              display: 'flex',
-              justifyContent: 'center',
-              minHeight: 420,
-              alignItems: 'center',
-            }}
-          >
+          <div className="matrix-card">
             <Matrix step={step} cellSize={cellSize} />
           </div>
 
           {/* sidebar */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="sidebar">
             <SettingsPanel
               n={n}
               density={density}
@@ -206,7 +174,7 @@ const App: React.FC = () => {
           zIndex: 20,
         }}
       >
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '12px 24px 14px' }}>
+        <div className="footer-inner">
           <Controls
             currentStep={currentStep}
             totalSteps={steps.length}
@@ -217,14 +185,7 @@ const App: React.FC = () => {
             canGoNext={canGoNext}
             isComplete={isComplete}
           />
-          <div
-            style={{
-              textAlign: 'center',
-              fontSize: 11,
-              color: 'var(--ink-faint)',
-              marginTop: 8,
-            }}
-          >
+          <div className="kbd-hint">
             Use <Kbd>←</Kbd> <Kbd>→</Kbd> arrow keys to navigate
           </div>
         </div>

@@ -145,10 +145,11 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
   }
 
   return (
-    <div style={{ overflowX: 'auto', padding: 4 }}>
-      <div
-        style={{
-          display: 'inline-grid',
+    <div style={{ overflowX: 'auto', padding: 4, WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ width: 'max-content', margin: '0 auto' }}>
+        <div
+          style={{
+            display: 'grid',
           gridTemplateColumns: `${labelW}px repeat(${n}, ${cell}px) minmax(96px, auto)`,
           gridTemplateRows: `34px repeat(${n}, ${cell}px) auto`,
           gap,
@@ -280,6 +281,7 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
           )
         })}
         <div />
+        </div>
       </div>
     </div>
   )

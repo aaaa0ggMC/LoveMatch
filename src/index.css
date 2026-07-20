@@ -180,3 +180,140 @@ input[type='range'] {
   cursor: pointer;
   height: 18px;
 }
+
+/* ---------- layout (responsive) ---------- */
+
+.header-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.app-main {
+  max-width: 1080px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 20px 24px 130px;
+  flex: 1;
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+
+.matrix-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 20px 16px;
+  box-shadow: 0 1px 3px rgba(28, 25, 23, 0.05);
+  min-height: 420px;
+  display: block;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.footer-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 12px 24px 14px;
+}
+
+.kbd-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 8px;
+}
+
+.stepinfo-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px 18px;
+  box-shadow: 0 1px 3px rgba(28, 25, 23, 0.05);
+}
+
+.stepinfo-score {
+  text-align: right;
+  flex-shrink: 0;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 880px) {
+  .layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .matrix-card {
+    min-height: unset;
+    padding: 14px 8px;
+    border-radius: 16px;
+  }
+
+  .app-main {
+    padding: 14px 12px 150px;
+  }
+
+  .header-inner,
+  .footer-inner {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .stepinfo-card {
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .stepinfo-score {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid var(--line);
+    padding: 8px 0 0;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .kbd-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .next-btn {
+    flex: 1 1 100%;
+    order: -1;
+    justify-content: center;
+  }
+
+  .header-subtitle {
+    display: none;
+  }
+}

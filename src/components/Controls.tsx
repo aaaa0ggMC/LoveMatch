@@ -71,7 +71,7 @@ export const Controls: React.FC<ControlsProps> = ({
       </div>
 
       {/* buttons */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+      <div className="controls-row">
         <button
           onClick={onPrev}
           disabled={!canGoPrev}
@@ -97,6 +97,7 @@ export const Controls: React.FC<ControlsProps> = ({
         <button
           onClick={onNext}
           disabled={!canGoNext || isComplete}
+          className="next-btn"
           style={{
             ...btnBase,
             padding: '11px 28px',

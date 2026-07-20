@@ -26,18 +26,7 @@ export const StepInfo: React.FC<StepInfoProps> = ({ type, phaseTitle, descriptio
   const badge = phaseBadge[type]
   return (
     <div className="step-enter" key={`${type}-${phaseTitle}-${description}`}>
-      <div
-        style={{
-          display: 'flex',
-          gap: 14,
-          alignItems: 'flex-start',
-          background: 'var(--surface)',
-          border: '1px solid var(--line)',
-          borderRadius: 16,
-          padding: '14px 18px',
-          boxShadow: '0 1px 3px rgba(28,25,23,0.05)',
-        }}
-      >
+      <div className="stepinfo-card">
         <PhaseIcon type={type} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -62,14 +51,7 @@ export const StepInfo: React.FC<StepInfoProps> = ({ type, phaseTitle, descriptio
             {description}
           </p>
         </div>
-        <div
-          style={{
-            textAlign: 'right',
-            flexShrink: 0,
-            paddingLeft: 12,
-            borderLeft: '1px solid var(--line)',
-          }}
-        >
+        <div className="stepinfo-score">
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, color: 'var(--ink-faint)' }}>
             TOTAL SCORE
           </div>
