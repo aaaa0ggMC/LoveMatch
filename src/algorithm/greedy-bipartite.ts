@@ -173,6 +173,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
   const activeRows: boolean[] = new Array(n).fill(true)
   const activeCols: boolean[] = new Array(n).fill(true)
   const pairs: Pair[] = []
+  const skippedLines: { kind: 'row' | 'col'; index: number }[] = []
   let totalScore = 0
 
   steps.push(
@@ -266,6 +267,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
 
         if (chosenLine.kind === 'row') activeRows[chosenLine.index] = false
         else activeCols[chosenLine.index] = false
+        skippedLines.push({ kind: chosenLine.kind, index: chosenLine.index })
 
         steps.push(
           stepBase(
@@ -404,14 +406,22 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
   const leftBoys = activeRows.map((a, i) => (a ? i : -1)).filter((i) => i >= 0)
   const leftGirls = activeCols.map((a, j) => (a ? j : -1)).filter((j) => j >= 0)
 
-  let completeDesc: string
-  if (leftBoys.length === 0 && leftGirls.length === 0) {
-    completeDesc = `Algorithm complete! All ${pairs.length} pairs matched. Total score: ${totalScore}.`
-  } else {
-    const bStr = leftBoys.length > 0 ? leftBoys.map((i) => `B${i}`).join(', ') : 'none'
-    const gStr = leftGirls.length > 0 ? leftGirls.map((j) => `G${j}`).join(', ') : 'none'
-    completeDesc = `Algorithm complete! ${pairs.length} pair(s) matched, total score ${totalScore}. Left unmatched — boys: ${bStr}; girls: ${gStr}.`
+  const unmatched: string[] = []
+  for (const l of skippedLines) {
+    unmatched.push(`${l.kind === 'row' ? 'B' : 'G'}${l.index} (all deal-breakers)`)
   }
+  for (const i of leftBoys) unmatched.push(`B${i} (no partner left)`)
+  for (const j of leftGirls) unmatched.push(`G${j} (no partner left)`)
+
+  const parts: string[] = [
+    `Algorithm complete! ${pairs.length} pair(s) matched, total score ${totalScore}.`,
+  ]
+  if (unmatched.length > 0) {
+    parts.push(`Unmatched: ${unmatched.join(', ')}.`)
+  } else {
+    parts.push('Everyone is matched.')
+  }
+  const completeDesc = parts.join(' ')
 
   steps.push(
     stepBase(
@@ -424,6 +434,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
       totalScore,
       completeDesc,
       'Complete',
+      { skippedLines: skippedLines.map((l) => ({ ...l })) },
     ),
   )
 

@@ -54,4 +54,6 @@ export interface AlgorithmStep {
   removedCol?: number
 
   removedLine?: { kind: 'row' | 'col'; index: number }
+
+  skippedLines?: { kind: 'row' | 'col'; index: number }[]
 }
