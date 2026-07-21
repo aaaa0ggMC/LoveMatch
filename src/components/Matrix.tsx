@@ -31,6 +31,13 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
   const labelW = Math.max(34, Math.round(cellSize * 0.75))
   const fontSize = Math.max(11, Math.round(cellSize * 0.28))
   const dbFontSize = Math.max(9, Math.round(cellSize * 0.22))
+  // Reserve a fixed width for the row-annotation column, sized for the widest
+  // possible tag ("DB ×<n> — skip" at 12px monospace + padding + ring), and a
+  // fixed height for the column-annotation row, so the grid keeps a constant
+  // size across steps — this prevents the horizontal scrollbar from flashing
+  // and the matrix from shifting around as tags appear/disappear.
+  const tagColW = Math.ceil(7.5 * (11 + String(n).length) + 20)
+  const tagRowH = 26
 
   const highlight = (i: number, j: number): HL => {
     if (!activeRows[i] || !activeCols[j]) return null
@@ -145,13 +152,13 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
   }
 
   return (
-    <div style={{ overflowX: 'auto', padding: 4, WebkitOverflowScrolling: 'touch' }}>
+    <div className="no-scrollbar" style={{ overflowX: 'auto', padding: 4, WebkitOverflowScrolling: 'touch' }}>
       <div style={{ width: 'max-content', margin: '0 auto' }}>
         <div
           style={{
             display: 'grid',
-          gridTemplateColumns: `${labelW}px repeat(${n}, ${cell}px) minmax(96px, auto)`,
-          gridTemplateRows: `34px repeat(${n}, ${cell}px) auto`,
+          gridTemplateColumns: `${labelW}px repeat(${n}, ${cell}px) ${tagColW}px`,
+          gridTemplateRows: `34px repeat(${n}, ${cell}px) ${tagRowH}px`,
           gap,
           alignItems: 'center',
         }}

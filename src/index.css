@@ -30,6 +30,9 @@
 html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* keep a stable gutter for the page scrollbar so the layout does not
+     shift horizontally when content height changes between steps */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -172,6 +175,16 @@ body {
 .nice-scroll::-webkit-scrollbar-thumb {
   background: var(--line);
   border-radius: 3px;
+}
+
+/* hide scrollbars entirely while keeping the area scrollable — the bar
+   would otherwise occupy layout space and pop in/out as content resizes */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome / Safari / Edge */
 }
 
 /* range sliders */
