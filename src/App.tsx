@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react'
 import { computeSteps } from './algorithm/greedy-bipartite'
-import { generateMatrix } from './algorithm/random'
+import { generateMatrix, DistSpec, DEFAULT_DIST } from './algorithm/random'
 import { AlgorithmStep } from './algorithm/types'
 import { Matrix } from './components/Matrix'
 import { PairList } from './components/PairList'
@@ -12,10 +12,13 @@ import { SettingsPanel } from './components/SettingsPanel'
 const App: React.FC = () => {
   const [n, setN] = useState(5)
   const [density, setDensity] = useState(0.7)
+  const [dist, setDist] = useState<DistSpec>(DEFAULT_DIST)
   const [cellSize, setCellSize] = useState(() =>
     typeof window !== 'undefined' && window.innerWidth < 640 ? 42 : 54,
   )
-  const [matrix, setMatrix] = useState<number[][]>(() => generateMatrix({ n: 5, density: 0.7 }))
+  const [matrix, setMatrix] = useState<number[][]>(() =>
+    generateMatrix({ n: 5, density: 0.7, dist: DEFAULT_DIST }),
+  )
   const [currentStep, setCurrentStep] = useState(0)
 
   const steps = useMemo<AlgorithmStep[]>(() => computeSteps(matrix, n), [matrix, n])
@@ -37,30 +40,38 @@ const App: React.FC = () => {
     setCurrentStep(0)
   }, [])
 
-  const reroll = useCallback((newN: number, newDensity: number) => {
-    setMatrix(generateMatrix({ n: newN, density: newDensity }))
+  const reroll = useCallback((newN: number, newDensity: number, newDist: DistSpec) => {
+    setMatrix(generateMatrix({ n: newN, density: newDensity, dist: newDist }))
     setCurrentStep(0)
   }, [])
 
   const handleNChange = useCallback(
     (v: number) => {
       setN(v)
-      reroll(v, density)
+      reroll(v, density, dist)
     },
-    [density, reroll],
+    [density, dist, reroll],
   )
 
   const handleDensityChange = useCallback(
     (v: number) => {
       setDensity(v)
-      reroll(n, v)
+      reroll(n, v, dist)
     },
-    [n, reroll],
+    [n, dist, reroll],
+  )
+
+  const handleDistChange = useCallback(
+    (v: DistSpec) => {
+      setDist(v)
+      reroll(n, density, v)
+    },
+    [n, density, reroll],
   )
 
   const handleRegenerate = useCallback(() => {
-    reroll(n, density)
-  }, [n, density, reroll])
+    reroll(n, density, dist)
+  }, [n, density, dist, reroll])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -150,9 +161,11 @@ const App: React.FC = () => {
               n={n}
               density={density}
               cellSize={cellSize}
+              dist={dist}
               onNChange={handleNChange}
               onDensityChange={handleDensityChange}
               onCellSizeChange={setCellSize}
+              onDistChange={handleDistChange}
               onRegenerate={handleRegenerate}
             />
             <PairList pairs={step.pairs} n={n} />

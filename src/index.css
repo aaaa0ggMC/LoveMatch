@@ -194,6 +194,11 @@ input[type='range'] {
   height: 18px;
 }
 
+/* custom details/summary: hide the default disclosure triangle */
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
 /* ---------- layout (responsive) ---------- */
 
 .header-inner {
