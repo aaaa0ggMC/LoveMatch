@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react'
 import { computeSteps } from './algorithm/greedy-bipartite'
-import { generateMatrix, DistSpec, DEFAULT_DIST } from './algorithm/random'
+import { generateMatrix, sampleLikeScore, dbValue, DistSpec, DEFAULT_DIST } from './algorithm/random'
 import { AlgorithmStep } from './algorithm/types'
 import { Matrix } from './components/Matrix'
 import { PairList } from './components/PairList'
@@ -72,6 +72,28 @@ const App: React.FC = () => {
   const handleRegenerate = useCallback(() => {
     reroll(n, density, dist)
   }, [n, density, dist, reroll])
+
+  // Load an edge-case preset: replace the matrix wholesale and restart.
+  const handleLoadPreset = useCallback((m: number[][]) => {
+    setN(m.length)
+    setMatrix(m.map((r) => [...r]))
+    setCurrentStep(0)
+  }, [])
+
+  // Runtime cell editing: double-click toggles a cell between like-score and
+  // deal-breaker. Only allowed before stepping starts (currentStep === 0);
+  // the step list recomputes automatically from the edited matrix.
+  const handleCellToggle = useCallback(
+    (i: number, j: number) => {
+      if (currentStep !== 0) return
+      setMatrix((m) => {
+        const next = m.map((r) => [...r])
+        next[i][j] = next[i][j] < 0 ? sampleLikeScore(dist) : dbValue(n)
+        return next
+      })
+    },
+    [currentStep, dist, n],
+  )
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -152,7 +174,24 @@ const App: React.FC = () => {
         <div className="layout-grid">
           {/* matrix card */}
           <div className="matrix-card">
-            <Matrix step={step} cellSize={cellSize} />
+            <Matrix
+              step={step}
+              cellSize={cellSize}
+              editable={currentStep === 0}
+              onCellToggle={handleCellToggle}
+            />
+            {currentStep === 0 && (
+              <div
+                style={{
+                  textAlign: 'center',
+                  fontSize: 11,
+                  color: 'var(--ink-faint)',
+                  marginTop: 10,
+                }}
+              >
+                Double-click a cell to toggle it between score and deal-breaker
+              </div>
+            )}
           </div>
 
           {/* sidebar */}
@@ -166,6 +205,7 @@ const App: React.FC = () => {
               onDensityChange={handleDensityChange}
               onCellSizeChange={setCellSize}
               onDistChange={handleDistChange}
+              onLoadPreset={handleLoadPreset}
               onRegenerate={handleRegenerate}
             />
             <PairList pairs={step.pairs} n={n} />

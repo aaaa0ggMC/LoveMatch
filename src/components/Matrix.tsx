@@ -4,6 +4,9 @@ import { AlgorithmStep } from '../algorithm/types'
 interface MatrixProps {
   step: AlgorithmStep
   cellSize?: number
+  /** allow double-click editing (only before stepping starts) */
+  editable?: boolean
+  onCellToggle?: (i: number, j: number) => void
 }
 
 /** soft rose heat color for like-scores in [0, 100] */
@@ -22,7 +25,7 @@ function scoreStyle(value: number): React.CSSProperties {
 
 type HL = { ring: string; bg: string; fg?: string } | null
 
-export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
+export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54, editable = false, onCellToggle }) => {
   const { matrix, type } = step
   const { values, rowLabels, colLabels, n, activeRows, activeCols } = matrix
 
@@ -233,7 +236,9 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
                     className={`cell ${removed ? 'cell-removed' : ''} ${isDB && !removed ? 'cell-db' : ''} ${
                       hl && hl.ring !== 'transparent' ? 'cell-hl' : ''
                     }`}
-                    style={style}
+                    style={{ ...style, ...(editable && !removed ? { cursor: 'pointer' } : {}) }}
+                    onDoubleClick={editable && !removed ? () => onCellToggle?.(ri, cj) : undefined}
+                    title={editable && !removed ? 'Double-click to toggle deal-breaker' : undefined}
                   >
                     {isDB ? 'DB' : v}
                   </div>

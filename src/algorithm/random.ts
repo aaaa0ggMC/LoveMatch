@@ -52,8 +52,13 @@ function randT(df: number): number {
   return z / Math.sqrt(chi2 / df)
 }
 
+/** the deal-breaker sentinel for an n x n matrix */
+export function dbValue(n: number): number {
+  return -100 * n
+}
+
 /** draw one like-score from the given distribution, clamped to [0, 100] and rounded */
-function sampleScore(dist: DistSpec): number {
+export function sampleLikeScore(dist: DistSpec): number {
   let v: number
   switch (dist.model) {
     case 'uniform':
@@ -95,14 +100,14 @@ export function generateMatrix(opts: GenOptions): number[][] {
   const { n, density } = opts
   const dist = opts.dist ?? DEFAULT_DIST
 
-  const DB_VALUE = -100 * n
+  const DB_VALUE = dbValue(n)
   const m: number[][] = []
 
   for (let i = 0; i < n; i++) {
     const row: number[] = []
     for (let j = 0; j < n; j++) {
       if (Math.random() < density) {
-        row.push(sampleScore(dist))
+        row.push(sampleLikeScore(dist))
       } else {
         row.push(DB_VALUE)
       }
