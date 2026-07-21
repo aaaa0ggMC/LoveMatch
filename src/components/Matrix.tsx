@@ -49,6 +49,11 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
       return { ring: '#f97316', bg: '#ffedd5', fg: '#9a3412' }
     if (type === 'select_regret' && cc && cc.i === i && cc.j === j)
       return { ring: 'var(--violet)', bg: '#ede9fe', fg: '#5b21b6' }
+    if (type === 'select_regret' && step.chosenRegretLine) {
+      const cl = step.chosenRegretLine
+      if ((cl.kind === 'row' && cl.index === i) || (cl.kind === 'col' && cl.index === j))
+        return { ring: 'transparent', bg: 'var(--violet-soft)' }
+    }
     if (type === 'select_db_line' && step.chosenLine) {
       const cl = step.chosenLine
       if ((cl.kind === 'row' && cl.index === i) || (cl.kind === 'col' && cl.index === j))
@@ -78,7 +83,10 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
       return { text: `${step.best1[i]} − ${step.best2[i]}`, strong: false }
     if (type === 'calc_regret' && step.regret) return { text: `R = ${step.regret[i]}`, strong: false }
     if (type === 'select_regret' && step.regret)
-      return { text: `R = ${step.regret[i]}`, strong: i === step.chosenRow }
+      return {
+        text: `R = ${step.regret[i]}`,
+        strong: step.chosenRegretLine?.kind === 'row' && step.chosenRegretLine.index === i,
+      }
     return null
   }
 
@@ -94,6 +102,14 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54 }) => {
       }
     if (type === 'skip_line' && step.colDB && step.chosenLine?.kind === 'col' && step.chosenLine.index === j)
       return { text: `DB ×${step.colDB[j]} — skip`, strong: true, danger: true }
+    if (type === 'scan_best_values' && step.colBest1 && step.colBest2)
+      return { text: `${step.colBest1[j]} − ${step.colBest2[j]}`, strong: false }
+    if (type === 'calc_regret' && step.regretCol) return { text: `R = ${step.regretCol[j]}`, strong: false }
+    if (type === 'select_regret' && step.regretCol)
+      return {
+        text: `R = ${step.regretCol[j]}`,
+        strong: step.chosenRegretLine?.kind === 'col' && step.chosenRegretLine.index === j,
+      }
     return null
   }
 

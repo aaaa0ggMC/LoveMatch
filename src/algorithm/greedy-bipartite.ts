@@ -137,6 +137,42 @@ function computeBest2(values: number[][], activeRows: boolean[], activeCols: boo
   return best2
 }
 
+function computeColBest1(values: number[][], activeRows: boolean[], activeCols: boolean[], n: number): number[] {
+  const best1 = new Array(n).fill(0)
+  for (let j = 0; j < n; j++) {
+    if (!activeCols[j]) continue
+    let max = -Infinity
+    for (let i = 0; i < n; i++) {
+      if (!activeRows[i]) continue
+      if (values[i][j] >= 0 && values[i][j] > max) max = values[i][j]
+    }
+    best1[j] = max === -Infinity ? 0 : max
+  }
+  return best1
+}
+
+function computeColBest2(values: number[][], activeRows: boolean[], activeCols: boolean[], n: number): number[] {
+  const best2 = new Array(n).fill(0)
+  for (let j = 0; j < n; j++) {
+    if (!activeCols[j]) continue
+    let first = -Infinity
+    let second = -Infinity
+    for (let i = 0; i < n; i++) {
+      if (!activeRows[i]) continue
+      const v = values[i][j]
+      if (v < 0) continue
+      if (v > first) {
+        second = first
+        first = v
+      } else if (v > second) {
+        second = v
+      }
+    }
+    best2[j] = second === -Infinity ? 0 : second
+  }
+  return best2
+}
+
 function activeRowCount(activeRows: boolean[]): number {
   return activeRows.filter(Boolean).length
 }
@@ -301,9 +337,11 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         ),
       )
     } else {
-      // --- Regret Path ---
+      // --- Regret Path (rows and columns, Vogel-style) ---
       const best1 = computeBest1(values, activeRows, activeCols, n)
       const best2 = computeBest2(values, activeRows, activeCols, n)
+      const colBest1 = computeColBest1(values, activeRows, activeCols, n)
+      const colBest2 = computeColBest2(values, activeRows, activeCols, n)
 
       steps.push(
         stepBase(
@@ -314,13 +352,14 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          'No deal-breakers remain. Scanning each row for its best and second-best values.',
+          'No deal-breakers remain. Scanning each row and column for its best and second-best values.',
           'Scan Best Values',
-          { best1, best2 },
+          { best1, best2, colBest1, colBest2 },
         ),
       )
 
       const regret = best1.map((b1, idx) => b1 - best2[idx])
+      const regretCol = colBest1.map((b1, idx) => b1 - colBest2[idx])
 
       steps.push(
         stepBase(
@@ -331,22 +370,43 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          'Computing regret = best1 − best2 for each row. Regret measures how much we lose if we miss the best match.',
+          'Computing regret = best1 − best2 for each row and column. Regret measures how much we lose if we miss the best match.',
           'Calculate Regret',
-          { best1, best2, regret },
+          { best1, best2, colBest1, colBest2, regret, regretCol },
         ),
       )
 
-      chosenI = findMaxIndex(regret)
-      let maxRegret = -1
+      // The line (row or column) with the highest regret is served first.
+      // Ties go to the row, then to the smallest index.
+      let rStar = -1
+      let rMax = -1
       for (let r = 0; r < n; r++) {
         if (!activeRows[r]) continue
-        if (regret[r] > maxRegret) {
-          maxRegret = regret[r]
-          chosenI = r
+        if (regret[r] > rMax) {
+          rMax = regret[r]
+          rStar = r
         }
       }
-      chosenJ = findMaxNonDBInRow(values, chosenI, activeCols, n)
+      let cStar = -1
+      let cMax = -1
+      for (let c = 0; c < n; c++) {
+        if (!activeCols[c]) continue
+        if (regretCol[c] > cMax) {
+          cMax = regretCol[c]
+          cStar = c
+        }
+      }
+
+      let chosenRegretLine: { kind: 'row' | 'col'; index: number; regret: number }
+      if (rMax >= cMax) {
+        chosenI = rStar
+        chosenJ = findMaxNonDBInRow(values, chosenI, activeCols, n)
+        chosenRegretLine = { kind: 'row', index: rStar, regret: rMax }
+      } else {
+        chosenJ = cStar
+        chosenI = findMaxNonDBInCol(values, chosenJ, activeRows, n)
+        chosenRegretLine = { kind: 'col', index: cStar, regret: cMax }
+      }
 
       steps.push(
         stepBase(
@@ -357,9 +417,22 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          `Row B${chosenI} has the highest regret (${regret[chosenI]}). Selecting its best cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`,
+          chosenRegretLine.kind === 'row'
+            ? `Row B${chosenI} has the highest regret (${chosenRegretLine.regret}). Selecting its best cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`
+            : `Column G${chosenJ} has the highest regret (${chosenRegretLine.regret}). Selecting its best cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`,
           'Select by Regret',
-          { best1, best2, regret, chosenCell: { i: chosenI, j: chosenJ, value: values[chosenI][chosenJ] }, chosenRow: chosenI, chosenCol: chosenJ },
+          {
+            best1,
+            best2,
+            colBest1,
+            colBest2,
+            regret,
+            regretCol,
+            chosenRegretLine,
+            chosenCell: { i: chosenI, j: chosenJ, value: values[chosenI][chosenJ] },
+            chosenRow: chosenI,
+            chosenCol: chosenJ,
+          },
         ),
       )
     }

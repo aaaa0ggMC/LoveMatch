@@ -47,6 +47,12 @@ export interface AlgorithmStep {
   best2?: number[]
   regret?: number[]
 
+  colBest1?: number[]
+  colBest2?: number[]
+  regretCol?: number[]
+
+  chosenRegretLine?: { kind: 'row' | 'col'; index: number; regret: number }
+
   chosenRow?: number
   chosenCol?: number
 
