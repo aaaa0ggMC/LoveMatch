@@ -1,5 +1,6 @@
 import React from 'react'
 import { DistModel, DistSpec, MODEL_DEFAULTS } from '../algorithm/random'
+import { EDGE_CASES } from '../algorithm/presets'
 
 interface SettingsPanelProps {
   n: number
@@ -10,6 +11,7 @@ interface SettingsPanelProps {
   onDensityChange: (v: number) => void
   onCellSizeChange: (v: number) => void
   onDistChange: (v: DistSpec) => void
+  onLoadPreset: (matrix: number[][]) => void
   onRegenerate: () => void
 }
 
@@ -69,6 +71,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onDensityChange,
   onCellSizeChange,
   onDistChange,
+  onLoadPreset,
   onRegenerate,
 }) => {
   const patchDist = (p: Partial<DistSpec>) => onDistChange({ ...dist, ...p })
@@ -315,6 +318,65 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               />
             )}
           </div>
+        </div>
+      </details>
+
+      {/* ---------- edge cases gallery ---------- */}
+      <details
+        style={{
+          marginTop: 12,
+          borderTop: '1px dashed var(--line)',
+          paddingTop: 10,
+        }}
+      >
+        <summary
+          style={{
+            cursor: 'pointer',
+            listStyle: 'none',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: 1,
+            color: 'var(--ink-faint)',
+            userSelect: 'none',
+          }}
+        >
+          EDGE CASES
+          <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: 0.3 }}>click to load ▾</span>
+        </summary>
+
+        <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {EDGE_CASES.map((ec) => (
+            <button
+              key={ec.id}
+              onClick={() => onLoadPreset(ec.matrix)}
+              style={{
+                textAlign: 'left',
+                padding: '7px 9px',
+                borderRadius: 9,
+                border: '1.5px solid var(--line)',
+                background: '#fafaf9',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                transition: 'all .15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--rose)'
+                e.currentTarget.style.background = 'var(--rose-soft)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--line)'
+                e.currentTarget.style.background = '#fafaf9'
+              }}
+            >
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{ec.name}</div>
+              <div style={{ fontSize: 10.5, color: 'var(--ink-faint)', marginTop: 2, lineHeight: 1.45 }}>
+                {ec.blurb}
+              </div>
+            </button>
+          ))}
         </div>
       </details>
     </div>
