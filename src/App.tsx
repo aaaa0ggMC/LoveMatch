@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react'
 import { computeSteps } from './algorithm/greedy-bipartite'
 import { generateMatrix, sampleLikeScore, dbValue, DistSpec, DEFAULT_DIST } from './algorithm/random'
+import { solveOptimal } from './algorithm/km'
 import { AlgorithmStep } from './algorithm/types'
 import { Matrix } from './components/Matrix'
 import { PairList } from './components/PairList'
@@ -8,6 +9,7 @@ import { Controls } from './components/Controls'
 import { StepInfo } from './components/StepInfo'
 import { Legend } from './components/Legend'
 import { SettingsPanel } from './components/SettingsPanel'
+import { Information } from './components/Information'
 
 const App: React.FC = () => {
   const [n, setN] = useState(5)
@@ -20,9 +22,14 @@ const App: React.FC = () => {
     generateMatrix({ n: 5, density: 0.7, dist: DEFAULT_DIST }),
   )
   const [currentStep, setCurrentStep] = useState(0)
+  const [view, setView] = useState<'match' | 'info'>('match')
 
   const steps = useMemo<AlgorithmStep[]>(() => computeSteps(matrix, n), [matrix, n])
   const step = steps[currentStep]
+
+  // KM optimum, precomputed for the information view
+  const optimal = useMemo(() => solveOptimal(matrix, n), [matrix, n])
+  const finalStep = steps[steps.length - 1]
 
   const canGoNext = currentStep < steps.length - 1
   const canGoPrev = currentStep > 0
@@ -96,13 +103,14 @@ const App: React.FC = () => {
   )
 
   useEffect(() => {
+    if (view !== 'match') return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') handleNext()
       if (e.key === 'ArrowLeft') handlePrev()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handleNext, handlePrev])
+  }, [handleNext, handlePrev, view])
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -146,30 +154,79 @@ const App: React.FC = () => {
               </div>
             </div>
           </div>
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: 'var(--ink-soft)',
-              background: '#f5f5f4',
-              padding: '5px 12px',
-              borderRadius: 20,
-              flexShrink: 0,
-            }}
-          >
-            {n} × {n} matrix
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                background: '#f5f5f4',
+                borderRadius: 10,
+                padding: 3,
+                gap: 2,
+              }}
+            >
+              {(
+                [
+                  { id: 'match', label: 'Match' },
+                  { id: 'info', label: 'Information' },
+                ] as const
+              ).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setView(t.id)}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 8,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    background: view === t.id ? 'var(--surface)' : 'transparent',
+                    color: view === t.id ? 'var(--ink)' : 'var(--ink-faint)',
+                    boxShadow: view === t.id ? '0 1px 3px rgba(28,25,23,0.12)' : 'none',
+                    transition: 'all .15s ease',
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: 'var(--ink-soft)',
+                background: '#f5f5f4',
+                padding: '5px 12px',
+                borderRadius: 20,
+                flexShrink: 0,
+              }}
+            >
+              {n} × {n} matrix
+            </span>
+          </div>
         </div>
       </header>
 
       {/* ---------- main ---------- */}
       <main className="app-main">
-        <StepInfo
-          type={step.type}
-          phaseTitle={step.phaseTitle}
-          description={step.description}
-          totalScore={step.totalScore}
-        />
+        {view === 'info' ? (
+          <Information
+            n={n}
+            matrix={matrix}
+            optimal={optimal}
+            greedyScore={finalStep.totalScore}
+            greedyMatched={finalStep.pairs.length}
+            onImport={handleLoadPreset}
+          />
+        ) : (
+          <>
+            <StepInfo
+              type={step.type}
+              phaseTitle={step.phaseTitle}
+              description={step.description}
+              totalScore={step.totalScore}
+            />
 
         <div className="layout-grid">
           {/* matrix card */}
@@ -212,37 +269,41 @@ const App: React.FC = () => {
             <Legend />
           </div>
         </div>
+          </>
+        )}
       </main>
 
       {/* ---------- bottom control bar ---------- */}
-      <footer
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: 'rgba(255,255,255,0.92)',
-          backdropFilter: 'blur(10px)',
-          borderTop: '1px solid var(--line)',
-          zIndex: 20,
-        }}
-      >
-        <div className="footer-inner">
-          <Controls
-            currentStep={currentStep}
-            totalSteps={steps.length}
-            onPrev={handlePrev}
-            onNext={handleNext}
-            onReset={handleReset}
-            canGoPrev={canGoPrev}
-            canGoNext={canGoNext}
-            isComplete={isComplete}
-          />
-          <div className="kbd-hint">
-            Use <Kbd>←</Kbd> <Kbd>→</Kbd> arrow keys to navigate
+      {view === 'match' && (
+        <footer
+          style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(10px)',
+            borderTop: '1px solid var(--line)',
+            zIndex: 20,
+          }}
+        >
+          <div className="footer-inner">
+            <Controls
+              currentStep={currentStep}
+              totalSteps={steps.length}
+              onPrev={handlePrev}
+              onNext={handleNext}
+              onReset={handleReset}
+              canGoPrev={canGoPrev}
+              canGoNext={canGoNext}
+              isComplete={isComplete}
+            />
+            <div className="kbd-hint">
+              Use <Kbd>←</Kbd> <Kbd>→</Kbd> arrow keys to navigate
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   )
 }
