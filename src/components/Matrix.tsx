@@ -70,20 +70,34 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54, editable = 
     return null
   }
 
+  /** number of feasible (non-DB) entries left in row i / column j */
+  const rowEntries = (i: number): number => {
+    let c = 0
+    for (let j = 0; j < n; j++) if (activeCols[j] && values[i][j] >= 0) c++
+    return c
+  }
+  const colEntries = (j: number): number => {
+    let c = 0
+    for (let i = 0; i < n; i++) if (activeRows[i] && values[i][j] >= 0) c++
+    return c
+  }
+
   const rowTag = (i: number): { text: string; strong: boolean; danger?: boolean } | null => {
     if (!activeRows[i]) return null
-    if ((type === 'scan_db' || type === 'select_db_line') && step.rowDB)
+    if ((type === 'scan_db' || type === 'select_db_line') && step.rowDB) {
+      const candR = type === 'select_db_line' ? step.candidateRegretRow?.[i] : null
       return {
-        text: `DB ×${step.rowDB[i]}`,
+        text: candR != null ? `DB ×${step.rowDB[i]} · R=${candR}` : `DB ×${step.rowDB[i]}`,
         strong:
           type === 'select_db_line' &&
           step.chosenLine?.kind === 'row' &&
           step.chosenLine.index === i,
       }
+    }
     if (type === 'skip_line' && step.rowDB && step.chosenLine?.kind === 'row' && step.chosenLine.index === i)
       return { text: `DB ×${step.rowDB[i]} — skip`, strong: true, danger: true }
     if (type === 'scan_best_values' && step.best1 && step.best2)
-      return { text: `${step.best1[i]} − ${step.best2[i]}`, strong: false }
+      return { text: `${step.best1[i]} − ${rowEntries(i) <= 1 ? '∅' : step.best2[i]}`, strong: false }
     if (type === 'calc_regret' && step.regret) return { text: `R = ${step.regret[i]}`, strong: false }
     if (type === 'select_regret' && step.regret)
       return {
@@ -95,18 +109,20 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54, editable = 
 
   const colTag = (j: number): { text: string; strong: boolean; danger?: boolean } | null => {
     if (!activeCols[j]) return null
-    if ((type === 'scan_db' || type === 'select_db_line') && step.colDB)
+    if ((type === 'scan_db' || type === 'select_db_line') && step.colDB) {
+      const candR = type === 'select_db_line' ? step.candidateRegretCol?.[j] : null
       return {
-        text: `DB ×${step.colDB[j]}`,
+        text: candR != null ? `DB ×${step.colDB[j]} · R=${candR}` : `DB ×${step.colDB[j]}`,
         strong:
           type === 'select_db_line' &&
           step.chosenLine?.kind === 'col' &&
           step.chosenLine.index === j,
       }
+    }
     if (type === 'skip_line' && step.colDB && step.chosenLine?.kind === 'col' && step.chosenLine.index === j)
       return { text: `DB ×${step.colDB[j]} — skip`, strong: true, danger: true }
     if (type === 'scan_best_values' && step.colBest1 && step.colBest2)
-      return { text: `${step.colBest1[j]} − ${step.colBest2[j]}`, strong: false }
+      return { text: `${step.colBest1[j]} − ${colEntries(j) <= 1 ? '∅' : step.colBest2[j]}`, strong: false }
     if (type === 'calc_regret' && step.regretCol) return { text: `R = ${step.regretCol[j]}`, strong: false }
     if (type === 'select_regret' && step.regretCol)
       return {

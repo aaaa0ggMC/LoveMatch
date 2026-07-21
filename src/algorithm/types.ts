@@ -41,6 +41,13 @@ export interface AlgorithmStep {
 
   chosenLine?: { kind: 'row' | 'col'; index: number; dbCount: number }
 
+  /** DB-mode: every remaining line tied at the maximum DB count */
+  candidateLines?: { kind: 'row' | 'col'; index: number }[]
+  /** DB-mode tie-break regret of each candidate row (null = not a candidate) */
+  candidateRegretRow?: (number | null)[]
+  /** DB-mode tie-break regret of each candidate column (null = not a candidate) */
+  candidateRegretCol?: (number | null)[]
+
   chosenCell?: { i: number; j: number; value: number }
 
   best1?: number[]

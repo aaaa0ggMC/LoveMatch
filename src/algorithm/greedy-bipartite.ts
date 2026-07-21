@@ -16,6 +16,8 @@ function makeMatrixState(
   }
 }
 
+// ---------- deal-breaker counts ----------
+
 function hasDB(values: number[][], activeRows: boolean[], activeCols: boolean[], n: number): boolean {
   for (let i = 0; i < n; i++) {
     if (!activeRows[i]) continue
@@ -51,17 +53,106 @@ function computeColDB(values: number[][], activeRows: boolean[], activeCols: boo
   return colDB
 }
 
-function findMaxIndex(arr: number[]): number {
-  let maxIdx = -1
-  let maxVal = -1
-  for (let i = 0; i < arr.length; i++) {
-    if (arr[i] > maxVal) {
-      maxVal = arr[i]
-      maxIdx = i
+// ---------- feasible-value statistics ----------
+
+/** statistics over the feasible (non-deal-breaker) values of one line */
+interface LineStats {
+  /** number of feasible entries in the line */
+  count: number
+  /** highest feasible value (-Infinity when the line has none) */
+  highest: number
+  /** second highest feasible value (-Infinity when there is no second) */
+  second: number
+  /** regret: 0 when the line has a single feasible entry, else highest − second */
+  regret: number
+}
+
+function rowStats(values: number[][], activeCols: boolean[], n: number, i: number): LineStats {
+  let count = 0
+  let first = -Infinity
+  let second = -Infinity
+  for (let j = 0; j < n; j++) {
+    if (!activeCols[j]) continue
+    const v = values[i][j]
+    if (v < 0) continue
+    count++
+    if (v > first) {
+      second = first
+      first = v
+    } else if (v > second) {
+      second = v
     }
   }
-  return maxIdx
+  return { count, highest: first, second, regret: count <= 1 ? 0 : first - second }
 }
+
+function colStats(values: number[][], activeRows: boolean[], n: number, j: number): LineStats {
+  let count = 0
+  let first = -Infinity
+  let second = -Infinity
+  for (let i = 0; i < n; i++) {
+    if (!activeRows[i]) continue
+    const v = values[i][j]
+    if (v < 0) continue
+    count++
+    if (v > first) {
+      second = first
+      first = v
+    } else if (v > second) {
+      second = v
+    }
+  }
+  return { count, highest: first, second, regret: count <= 1 ? 0 : first - second }
+}
+
+// ---------- participants & selection ----------
+
+interface Participant {
+  kind: 'row' | 'col'
+  index: number
+}
+
+/** position in the common numbering order B0, G0, B1, G1, … */
+function orderKey(p: Participant): number {
+  return p.kind === 'row' ? 2 * p.index : 2 * p.index + 1
+}
+
+function participantLabel(p: Participant): string {
+  return `${p.kind === 'row' ? 'B' : 'G'}${p.index}`
+}
+
+interface ScoredParticipant {
+  p: Participant
+  stats: LineStats
+}
+
+/**
+ * Rank candidates by the algorithm's priority:
+ *   1. larger regret
+ *   2. larger highest (best) value
+ *   3. earlier participant in the common numbering order B0, G0, B1, G1, …
+ * Returns a new array, winner first.
+ */
+function rankCandidates(cands: ScoredParticipant[]): ScoredParticipant[] {
+  return [...cands].sort((a, b) => {
+    if (a.stats.regret !== b.stats.regret) return b.stats.regret - a.stats.regret
+    if (a.stats.highest !== b.stats.highest) return b.stats.highest - a.stats.highest
+    return orderKey(a.p) - orderKey(b.p)
+  })
+}
+
+/** short human-readable reason why the winner beat the runner-up */
+function decideReason(ranked: ScoredParticipant[]): string {
+  if (ranked.length < 2) return 'the only candidate'
+  const w = ranked[0]
+  const r = ranked[1]
+  if (w.stats.regret !== r.stats.regret) return `largest regret (${w.stats.regret})`
+  if (w.stats.highest !== r.stats.highest)
+    return `regret tied at ${w.stats.regret}, largest best value (${w.stats.highest})`
+  return `regret and best value tied, earliest in the order B0, G0, B1, G1, …`
+}
+
+// ---------- argmax of feasible values ----------
 
 function findMaxNonDBInRow(
   values: number[][],
@@ -101,77 +192,7 @@ function findMaxNonDBInCol(
   return maxIdx
 }
 
-function computeBest1(values: number[][], activeRows: boolean[], activeCols: boolean[], n: number): number[] {
-  const best1 = new Array(n).fill(0)
-  for (let i = 0; i < n; i++) {
-    if (!activeRows[i]) continue
-    let max = -Infinity
-    for (let j = 0; j < n; j++) {
-      if (!activeCols[j]) continue
-      if (values[i][j] >= 0 && values[i][j] > max) max = values[i][j]
-    }
-    best1[i] = max === -Infinity ? 0 : max
-  }
-  return best1
-}
-
-function computeBest2(values: number[][], activeRows: boolean[], activeCols: boolean[], n: number): number[] {
-  const best2 = new Array(n).fill(0)
-  for (let i = 0; i < n; i++) {
-    if (!activeRows[i]) continue
-    let first = -Infinity
-    let second = -Infinity
-    for (let j = 0; j < n; j++) {
-      if (!activeCols[j]) continue
-      const v = values[i][j]
-      if (v < 0) continue
-      if (v > first) {
-        second = first
-        first = v
-      } else if (v > second) {
-        second = v
-      }
-    }
-    best2[i] = second === -Infinity ? 0 : second
-  }
-  return best2
-}
-
-function computeColBest1(values: number[][], activeRows: boolean[], activeCols: boolean[], n: number): number[] {
-  const best1 = new Array(n).fill(0)
-  for (let j = 0; j < n; j++) {
-    if (!activeCols[j]) continue
-    let max = -Infinity
-    for (let i = 0; i < n; i++) {
-      if (!activeRows[i]) continue
-      if (values[i][j] >= 0 && values[i][j] > max) max = values[i][j]
-    }
-    best1[j] = max === -Infinity ? 0 : max
-  }
-  return best1
-}
-
-function computeColBest2(values: number[][], activeRows: boolean[], activeCols: boolean[], n: number): number[] {
-  const best2 = new Array(n).fill(0)
-  for (let j = 0; j < n; j++) {
-    if (!activeCols[j]) continue
-    let first = -Infinity
-    let second = -Infinity
-    for (let i = 0; i < n; i++) {
-      if (!activeRows[i]) continue
-      const v = values[i][j]
-      if (v < 0) continue
-      if (v > first) {
-        second = first
-        first = v
-      } else if (v > second) {
-        second = v
-      }
-    }
-    best2[j] = second === -Infinity ? 0 : second
-  }
-  return best2
-}
+// ---------- step plumbing ----------
 
 function activeRowCount(activeRows: boolean[]): number {
   return activeRows.filter(Boolean).length
@@ -231,7 +252,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
     let chosenI: number, chosenJ: number
 
     if (dbPresent) {
-      // --- Deal Breaker Path ---
+      // ---------- deal-breaker mode ----------
       const rowDB = computeRowDB(values, activeRows, activeCols, n)
       const colDB = computeColDB(values, activeRows, activeCols, n)
 
@@ -250,19 +271,49 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         ),
       )
 
-      const rStar = findMaxIndex(rowDB)
-      const cStar = findMaxIndex(colDB)
+      // maxDB over all remaining rows and columns
+      let maxDB = 0
+      for (let i = 0; i < n; i++) if (activeRows[i]) maxDB = Math.max(maxDB, rowDB[i])
+      for (let j = 0; j < n; j++) if (activeCols[j]) maxDB = Math.max(maxDB, colDB[j])
 
-      let chosenLine: { kind: 'row' | 'col'; index: number; dbCount: number }
+      // candidates: every remaining line tied at maxDB
+      const candidates: Participant[] = []
+      for (let i = 0; i < n; i++)
+        if (activeRows[i] && rowDB[i] === maxDB) candidates.push({ kind: 'row', index: i })
+      for (let j = 0; j < n; j++)
+        if (activeCols[j] && colDB[j] === maxDB) candidates.push({ kind: 'col', index: j })
 
-      if (rowDB[rStar] >= colDB[cStar]) {
-        chosenLine = { kind: 'row', index: rStar, dbCount: rowDB[rStar] }
-        chosenI = rStar
-        chosenJ = findMaxNonDBInRow(values, chosenI, activeCols, n)
+      const statsOf = (p: Participant): LineStats =>
+        p.kind === 'row' ? rowStats(values, activeCols, n, p.index) : colStats(values, activeRows, n, p.index)
+
+      // a single candidate is selected directly; otherwise the tie is broken
+      // by regret, then best feasible value, then the common numbering order
+      const ranked = rankCandidates(candidates.map((p) => ({ p, stats: statsOf(p) })))
+      const winner = ranked[0]
+      const chosenLine = { kind: winner.p.kind, index: winner.p.index, dbCount: maxDB }
+
+      let candidateRegretRow: (number | null)[] | undefined
+      let candidateRegretCol: (number | null)[] | undefined
+      let selectDesc: string
+      if (candidates.length > 1) {
+        candidateRegretRow = new Array(n).fill(null)
+        candidateRegretCol = new Array(n).fill(null)
+        for (const { p, stats } of ranked) {
+          if (p.kind === 'row') candidateRegretRow[p.index] = stats.regret
+          else candidateRegretCol[p.index] = stats.regret
+        }
+        const detail = ranked
+          .map(
+            ({ p, stats }) =>
+              `${participantLabel(p)} R=${stats.regret}, best ${stats.count === 0 ? '—' : stats.highest}`,
+          )
+          .join('; ')
+        selectDesc =
+          `${candidates.length} lines share the maximum DB count (${maxDB}): ${candidates.map(participantLabel).join(', ')}. ` +
+          `Tie-break by regret, then best feasible value, then order B0, G0, B1, G1, … — ${detail}. ` +
+          `Selected ${participantLabel(winner.p)}: ${decideReason(ranked)}.`
       } else {
-        chosenLine = { kind: 'col', index: cStar, dbCount: colDB[cStar] }
-        chosenJ = cStar
-        chosenI = findMaxNonDBInCol(values, chosenJ, activeRows, n)
+        selectDesc = `${participantLabel(winner.p)} is the only line with the maximum DB count (${maxDB}). Serving the most constrained line first.`
       }
 
       steps.push(
@@ -274,18 +325,24 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          chosenLine.kind === 'row'
-            ? `Row B${chosenLine.index} has the most DB cells (${chosenLine.dbCount}). Tie broken by smallest index. Serving the most constrained row first.`
-            : `Column G${chosenLine.index} has the most DB cells (${chosenLine.dbCount}). Tie broken by smallest index. Serving the most constrained column first.`,
+          selectDesc,
           'Select Most Constrained Line',
-          { rowDB, colDB, chosenLine },
+          {
+            rowDB,
+            colDB,
+            chosenLine,
+            candidateLines: candidates.map((p) => ({ ...p })),
+            candidateRegretRow,
+            candidateRegretCol,
+          },
         ),
       )
 
-      if (chosenI === -1 || chosenJ === -1) {
-        // The most constrained line has NO non-DB cell: it can never be matched.
-        // Skip it — remove the line without forming a pair and without adding points.
-        const label = chosenLine.kind === 'row' ? `B${chosenLine.index}` : `G${chosenLine.index}`
+      if (winner.stats.count === 0) {
+        // The selected line has no feasible value at all: it can never be
+        // matched. Skip it — remove the line without forming a pair and
+        // without adding points, then carry on.
+        const skipLabel = participantLabel(winner.p)
         steps.push(
           stepBase(
             'skip_line',
@@ -295,15 +352,15 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
             n,
             pairs,
             totalScore,
-            `${chosenLine.kind === 'row' ? 'Row' : 'Column'} ${label} contains only deal-breakers — no valid partner exists. Skipping this line: no pair is formed and no points are added.`,
+            `${winner.p.kind === 'row' ? 'Row' : 'Column'} ${skipLabel} contains no feasible value — every remaining cell is a deal-breaker. Skipping this line: no pair is formed and no points are added.`,
             'Skip Unmatchable Line',
             { rowDB, colDB, chosenLine },
           ),
         )
 
-        if (chosenLine.kind === 'row') activeRows[chosenLine.index] = false
-        else activeCols[chosenLine.index] = false
-        skippedLines.push({ kind: chosenLine.kind, index: chosenLine.index })
+        if (winner.p.kind === 'row') activeRows[winner.p.index] = false
+        else activeCols[winner.p.index] = false
+        skippedLines.push({ kind: winner.p.kind, index: winner.p.index })
 
         steps.push(
           stepBase(
@@ -314,12 +371,20 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
             n,
             pairs,
             totalScore,
-            `${chosenLine.kind === 'row' ? 'Row' : 'Column'} ${label} removed from the relation. ${activeRowCount(activeRows)} boy(s) and ${activeColCount(activeCols)} girl(s) remaining.`,
+            `${winner.p.kind === 'row' ? 'Row' : 'Column'} ${skipLabel} removed from the relation. ${activeRowCount(activeRows)} boy(s) and ${activeColCount(activeCols)} girl(s) remaining.`,
             'Remove Line',
-            { removedLine: { kind: chosenLine.kind, index: chosenLine.index } },
+            { removedLine: { kind: winner.p.kind, index: winner.p.index } },
           ),
         )
         continue
+      }
+
+      if (winner.p.kind === 'row') {
+        chosenI = winner.p.index
+        chosenJ = findMaxNonDBInRow(values, chosenI, activeCols, n)
+      } else {
+        chosenJ = winner.p.index
+        chosenI = findMaxNonDBInCol(values, chosenJ, activeRows, n)
       }
 
       steps.push(
@@ -331,17 +396,38 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          `Selecting the highest non-DB cell in ${chosenLine.kind} ${chosenLine.kind === 'row' ? 'B' : 'G'}${chosenLine.index}. Cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`,
+          `Selecting the highest feasible value in ${winner.p.kind === 'row' ? 'row' : 'column'} ${participantLabel(winner.p)} — cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`,
           'Select Best Cell',
           { rowDB, colDB, chosenLine, chosenCell: { i: chosenI, j: chosenJ, value: values[chosenI][chosenJ] } },
         ),
       )
     } else {
-      // --- Regret Path (rows and columns, Vogel-style) ---
-      const best1 = computeBest1(values, activeRows, activeCols, n)
-      const best2 = computeBest2(values, activeRows, activeCols, n)
-      const colBest1 = computeColBest1(values, activeRows, activeCols, n)
-      const colBest2 = computeColBest2(values, activeRows, activeCols, n)
+      // ---------- regret mode (no deal-breakers left) ----------
+      // All remaining rows and columns are considered together at the same level.
+      const best1 = new Array(n).fill(0)
+      const best2 = new Array(n).fill(0)
+      const colBest1 = new Array(n).fill(0)
+      const colBest2 = new Array(n).fill(0)
+      const regret = new Array(n).fill(0)
+      const regretCol = new Array(n).fill(0)
+
+      const all: ScoredParticipant[] = []
+      for (let i = 0; i < n; i++) {
+        if (!activeRows[i]) continue
+        const s = rowStats(values, activeCols, n, i)
+        best1[i] = s.highest
+        best2[i] = s.second === -Infinity ? 0 : s.second
+        regret[i] = s.regret
+        all.push({ p: { kind: 'row', index: i }, stats: s })
+      }
+      for (let j = 0; j < n; j++) {
+        if (!activeCols[j]) continue
+        const s = colStats(values, activeRows, n, j)
+        colBest1[j] = s.highest
+        colBest2[j] = s.second === -Infinity ? 0 : s.second
+        regretCol[j] = s.regret
+        all.push({ p: { kind: 'col', index: j }, stats: s })
+      }
 
       steps.push(
         stepBase(
@@ -352,14 +438,11 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          'No deal-breakers remain. Scanning each row and column for its best and second-best values.',
+          'No deal-breakers remain — all remaining rows and columns are considered together. Scanning each line for its best and second-best values.',
           'Scan Best Values',
           { best1, best2, colBest1, colBest2 },
         ),
       )
-
-      const regret = best1.map((b1, idx) => b1 - best2[idx])
-      const regretCol = colBest1.map((b1, idx) => b1 - colBest2[idx])
 
       steps.push(
         stepBase(
@@ -370,43 +453,24 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          'Computing regret = best1 − best2 for each row and column. Regret measures how much we lose if we miss the best match.',
+          'Computing regret = best − second-best for every row and column. A line with a single entry has regret 0.',
           'Calculate Regret',
           { best1, best2, colBest1, colBest2, regret, regretCol },
         ),
       )
 
-      // The line (row or column) with the highest regret is served first.
-      // Ties go to the row, then to the smallest index.
-      let rStar = -1
-      let rMax = -1
-      for (let r = 0; r < n; r++) {
-        if (!activeRows[r]) continue
-        if (regret[r] > rMax) {
-          rMax = regret[r]
-          rStar = r
-        }
-      }
-      let cStar = -1
-      let cMax = -1
-      for (let c = 0; c < n; c++) {
-        if (!activeCols[c]) continue
-        if (regretCol[c] > cMax) {
-          cMax = regretCol[c]
-          cStar = c
-        }
+      const ranked = rankCandidates(all)
+      const winner = ranked[0]
+
+      if (winner.p.kind === 'row') {
+        chosenI = winner.p.index
+        chosenJ = findMaxNonDBInRow(values, chosenI, activeCols, n)
+      } else {
+        chosenJ = winner.p.index
+        chosenI = findMaxNonDBInCol(values, chosenJ, activeRows, n)
       }
 
-      let chosenRegretLine: { kind: 'row' | 'col'; index: number; regret: number }
-      if (rMax >= cMax) {
-        chosenI = rStar
-        chosenJ = findMaxNonDBInRow(values, chosenI, activeCols, n)
-        chosenRegretLine = { kind: 'row', index: rStar, regret: rMax }
-      } else {
-        chosenJ = cStar
-        chosenI = findMaxNonDBInCol(values, chosenJ, activeRows, n)
-        chosenRegretLine = { kind: 'col', index: cStar, regret: cMax }
-      }
+      const chosenRegretLine = { kind: winner.p.kind, index: winner.p.index, regret: winner.stats.regret }
 
       steps.push(
         stepBase(
@@ -417,9 +481,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          chosenRegretLine.kind === 'row'
-            ? `Row B${chosenI} has the highest regret (${chosenRegretLine.regret}). Selecting its best cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`
-            : `Column G${chosenJ} has the highest regret (${chosenRegretLine.regret}). Selecting its best cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`,
+          `${winner.p.kind === 'row' ? 'Row' : 'Column'} ${participantLabel(winner.p)} wins: ${decideReason(ranked)}. Selecting its best cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`,
           'Select by Regret',
           {
             best1,
@@ -437,7 +499,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
       )
     }
 
-    // Commit
+    // ---------- commit ----------
     pairs.push({ boy: chosenI, girl: chosenJ, score: values[chosenI][chosenJ] })
     totalScore += values[chosenI][chosenJ]
 
@@ -452,11 +514,15 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         totalScore,
         `Matched! Pair (B${chosenI}, G${chosenJ}) committed with score ${values[chosenI][chosenJ]}. Running total: ${totalScore}.`,
         'Commit Pair',
-        { chosenRow: chosenI, chosenCol: chosenJ },
+        {
+          chosenRow: chosenI,
+          chosenCol: chosenJ,
+          chosenCell: { i: chosenI, j: chosenJ, value: values[chosenI][chosenJ] },
+        },
       ),
     )
 
-    // Remove
+    // ---------- remove ----------
     activeRows[chosenI] = false
     activeCols[chosenJ] = false
 
@@ -494,7 +560,6 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
   } else {
     parts.push('Everyone is matched.')
   }
-  const completeDesc = parts.join(' ')
 
   steps.push(
     stepBase(
@@ -505,7 +570,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
       n,
       pairs,
       totalScore,
-      completeDesc,
+      parts.join(' '),
       'Complete',
       { skippedLines: skippedLines.map((l) => ({ ...l })) },
     ),
