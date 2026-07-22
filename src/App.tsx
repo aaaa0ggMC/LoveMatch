@@ -23,6 +23,9 @@ const App: React.FC = () => {
   )
   const [currentStep, setCurrentStep] = useState(0)
   const [view, setView] = useState<'match' | 'info'>('match')
+  // heat gradient on matrix cells (higher score = redder); off by default,
+  // toggled from the Information view
+  const [showGradient, setShowGradient] = useState(false)
 
   const steps = useMemo<AlgorithmStep[]>(() => computeSteps(matrix, n), [matrix, n])
   const step = steps[currentStep]
@@ -218,6 +221,8 @@ const App: React.FC = () => {
             greedyScore={finalStep.totalScore}
             greedyMatched={finalStep.pairs.length}
             onImport={handleLoadPreset}
+            showGradient={showGradient}
+            onShowGradientChange={setShowGradient}
           />
         ) : (
           <>
@@ -236,6 +241,7 @@ const App: React.FC = () => {
               cellSize={cellSize}
               editable={currentStep === 0}
               onCellToggle={handleCellToggle}
+              showGradient={showGradient}
             />
             {currentStep === 0 && (
               <div

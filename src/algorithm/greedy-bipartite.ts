@@ -112,13 +112,14 @@ interface Participant {
   index: number
 }
 
-/** position in the common numbering order B0, G0, B1, G1, … */
+/** position in the common numbering order B1, G1, B2, G2, … */
 function orderKey(p: Participant): number {
   return p.kind === 'row' ? 2 * p.index : 2 * p.index + 1
 }
 
+/** displayed participant labels are 1-based (B1, G1, …) */
 function participantLabel(p: Participant): string {
-  return `${p.kind === 'row' ? 'B' : 'G'}${p.index}`
+  return `${p.kind === 'row' ? 'B' : 'G'}${p.index + 1}`
 }
 
 interface ScoredParticipant {
@@ -130,7 +131,7 @@ interface ScoredParticipant {
  * Rank candidates by the algorithm's priority:
  *   1. larger regret
  *   2. larger highest (best) value
- *   3. earlier participant in the common numbering order B0, G0, B1, G1, …
+ *   3. earlier participant in the common numbering order B1, G1, B2, G2, …
  * Returns a new array, winner first.
  */
 function rankCandidates(cands: ScoredParticipant[]): ScoredParticipant[] {
@@ -149,7 +150,7 @@ function decideReason(ranked: ScoredParticipant[]): string {
   if (w.stats.regret !== r.stats.regret) return `largest regret (${w.stats.regret})`
   if (w.stats.highest !== r.stats.highest)
     return `regret tied at ${w.stats.regret}, largest best value (${w.stats.highest})`
-  return `regret and best value tied, earliest in the order B0, G0, B1, G1, …`
+  return `regret and best value tied, earliest in the order B1, G1, B2, G2, …`
 }
 
 // ---------- argmax of feasible values ----------
@@ -310,7 +311,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           .join('; ')
         selectDesc =
           `${candidates.length} lines share the maximum DB count (${maxDB}): ${candidates.map(participantLabel).join(', ')}. ` +
-          `Tie-break by regret, then best feasible value, then order B0, G0, B1, G1, … — ${detail}. ` +
+          `Tie-break by regret, then best feasible value, then order B1, G1, B2, G2, … — ${detail}. ` +
           `Selected ${participantLabel(winner.p)}: ${decideReason(ranked)}.`
       } else {
         selectDesc = `${participantLabel(winner.p)} is the only line with the maximum DB count (${maxDB}). Serving the most constrained line first.`
@@ -396,7 +397,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          `Selecting the highest feasible value in ${winner.p.kind === 'row' ? 'row' : 'column'} ${participantLabel(winner.p)} — cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`,
+          `Selecting the highest feasible value in ${winner.p.kind === 'row' ? 'row' : 'column'} ${participantLabel(winner.p)} — cell (B${chosenI + 1}, G${chosenJ + 1}) with score ${values[chosenI][chosenJ]}.`,
           'Select Best Cell',
           { rowDB, colDB, chosenLine, chosenCell: { i: chosenI, j: chosenJ, value: values[chosenI][chosenJ] } },
         ),
@@ -481,7 +482,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
           n,
           pairs,
           totalScore,
-          `${winner.p.kind === 'row' ? 'Row' : 'Column'} ${participantLabel(winner.p)} wins: ${decideReason(ranked)}. Selecting its best cell (B${chosenI}, G${chosenJ}) with score ${values[chosenI][chosenJ]}.`,
+          `${winner.p.kind === 'row' ? 'Row' : 'Column'} ${participantLabel(winner.p)} wins: ${decideReason(ranked)}. Selecting its best cell (B${chosenI + 1}, G${chosenJ + 1}) with score ${values[chosenI][chosenJ]}.`,
           'Select by Regret',
           {
             best1,
@@ -512,7 +513,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         n,
         pairs,
         totalScore,
-        `Matched! Pair (B${chosenI}, G${chosenJ}) committed with score ${values[chosenI][chosenJ]}. Running total: ${totalScore}.`,
+        `Matched! Pair (B${chosenI + 1}, G${chosenJ + 1}) committed with score ${values[chosenI][chosenJ]}. Running total: ${totalScore}.`,
         'Commit Pair',
         {
           chosenRow: chosenI,
@@ -535,7 +536,7 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         n,
         pairs,
         totalScore,
-        `Removing row B${chosenI} and column G${chosenJ} from the relation. ${activeRowCount(activeRows)} boy(s) and ${activeColCount(activeCols)} girl(s) remaining.`,
+        `Removing row B${chosenI + 1} and column G${chosenJ + 1} from the relation. ${activeRowCount(activeRows)} boy(s) and ${activeColCount(activeCols)} girl(s) remaining.`,
         'Remove Row & Column',
         { removedRow: chosenI, removedCol: chosenJ },
       ),
@@ -547,10 +548,10 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
 
   const unmatched: string[] = []
   for (const l of skippedLines) {
-    unmatched.push(`${l.kind === 'row' ? 'B' : 'G'}${l.index} (all deal-breakers)`)
+    unmatched.push(`${l.kind === 'row' ? 'B' : 'G'}${l.index + 1} (all deal-breakers)`)
   }
-  for (const i of leftBoys) unmatched.push(`B${i} (no partner left)`)
-  for (const j of leftGirls) unmatched.push(`G${j} (no partner left)`)
+  for (const i of leftBoys) unmatched.push(`B${i + 1} (no partner left)`)
+  for (const j of leftGirls) unmatched.push(`G${j + 1} (no partner left)`)
 
   const parts: string[] = [
     `Algorithm complete! ${pairs.length} pair(s) matched, total score ${totalScore}.`,

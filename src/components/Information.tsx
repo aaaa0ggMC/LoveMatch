@@ -9,6 +9,8 @@ interface InformationProps {
   greedyScore: number
   greedyMatched: number
   onImport: (matrix: number[][]) => void
+  showGradient: boolean
+  onShowGradientChange: (v: boolean) => void
 }
 
 const cardStyle: React.CSSProperties = {
@@ -61,6 +63,8 @@ export const Information: React.FC<InformationProps> = ({
   greedyScore,
   greedyMatched,
   onImport,
+  showGradient,
+  onShowGradientChange,
 }) => {
   const fileRef = useRef<HTMLInputElement>(null)
   const [importError, setImportError] = useState<string | null>(null)
@@ -174,7 +178,8 @@ export const Information: React.FC<InformationProps> = ({
           )}
         </div>
 
-        {/* ---------- import / export ---------- */}
+        {/* ---------- import / export + display options ---------- */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         <div style={cardStyle}>
           <div style={{ ...cardTitle, marginBottom: 10 }}>MATRIX DATA</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -280,6 +285,65 @@ export const Information: React.FC<InformationProps> = ({
             JSON format: <code>{'{ "n": 3, "matrix": [[...], ...] }'}</code> or a bare 2-D array.
             Negative cells are deal-breakers. Size 3–11.
           </div>
+        </div>
+
+        {/* ---------- display options ---------- */}
+        <div style={cardStyle}>
+          <div style={{ ...cardTitle, marginBottom: 10 }}>DISPLAY</div>
+          <button
+            role="switch"
+            aria-checked={showGradient}
+            onClick={() => onShowGradientChange(!showGradient)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 10,
+              padding: 0,
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              textAlign: 'left',
+            }}
+          >
+            <span>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>
+                Score heat gradient
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--ink-faint)', marginTop: 2, lineHeight: 1.45 }}>
+                Tint matrix cells red — the higher the score, the deeper the red.
+              </span>
+            </span>
+            <span
+              style={{
+                flexShrink: 0,
+                width: 38,
+                height: 22,
+                borderRadius: 11,
+                position: 'relative',
+                background: showGradient ? 'var(--rose)' : '#d6d3d1',
+                transition: 'background .2s ease',
+                boxShadow: showGradient ? '0 2px 6px rgba(244,63,94,0.35)' : 'inset 0 1px 2px rgba(28,25,23,0.12)',
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 2,
+                  left: showGradient ? 18 : 2,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  boxShadow: '0 1px 3px rgba(28,25,23,0.25)',
+                  transition: 'left .2s ease',
+                }}
+              />
+            </span>
+          </button>
+        </div>
         </div>
       </div>
     </div>

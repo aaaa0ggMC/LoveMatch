@@ -7,6 +7,8 @@ interface MatrixProps {
   /** allow double-click editing (only before stepping starts) */
   editable?: boolean
   onCellToggle?: (i: number, j: number) => void
+  /** tint cells red by score (higher = redder); off = uniform light tint (the score-30 color) */
+  showGradient?: boolean
 }
 
 /** soft rose heat color for like-scores in [0, 100] */
@@ -25,7 +27,13 @@ function scoreStyle(value: number): React.CSSProperties {
 
 type HL = { ring: string; bg: string; fg?: string } | null
 
-export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54, editable = false, onCellToggle }) => {
+export const Matrix: React.FC<MatrixProps> = ({
+  step,
+  cellSize = 54,
+  editable = false,
+  onCellToggle,
+  showGradient = false,
+}) => {
   const { matrix, type } = step
   const { values, rowLabels, colLabels, n, activeRows, activeCols } = matrix
 
@@ -203,7 +211,7 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54, editable = 
         {/* column headers */}
         {colLabels.map((cj) => (
           <div key={`ch-${cj}`} style={colHeaderStyle(cj)}>
-            G{cj}
+            G{cj + 1}
           </div>
         ))}
         <div />
@@ -213,7 +221,7 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54, editable = 
           const tag = rowTag(ri)
           return (
             <React.Fragment key={`r-${ri}`}>
-              <div style={rowHeaderStyle(ri)}>B{ri}</div>
+              <div style={rowHeaderStyle(ri)}>B{ri + 1}</div>
               {colLabels.map((cj) => {
                 const v = values[ri][cj]
                 const removed = !activeRows[ri] || !activeCols[cj]
@@ -234,9 +242,11 @@ export const Matrix: React.FC<MatrixProps> = ({ step, cellSize = 54, editable = 
                         color: 'var(--ink-faint)',
                         textDecoration: 'line-through',
                       }
-                    : isDB
-                      ? { color: '#a8a29e', fontWeight: 600, fontSize: dbFontSize, letterSpacing: 0.5 }
-                      : scoreStyle(v)),
+                      : isDB
+                        ? { color: '#a8a29e', fontWeight: 600, fontSize: dbFontSize, letterSpacing: 0.5 }
+                        : showGradient
+                          ? scoreStyle(v)
+                          : scoreStyle(30)),
                   ...(hl
                     ? {
                         background: hl.bg,

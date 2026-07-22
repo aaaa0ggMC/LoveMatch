@@ -20,7 +20,7 @@ export const EDGE_CASES: EdgeCase[] = [
     id: 'preset-1',
     name: 'Preset 1',
     blurb:
-      'B0, B2 and B4 can only match G0/G3/G4 — it looks like someone must be stranded, but the regret tie-breaks thread it perfectly: everyone gets matched and greedy hits the optimum 270.',
+      'B1, B3 and B5 can only match G1/G4/G5 — it looks like someone must be stranded, but the regret tie-breaks thread it perfectly: everyone gets matched and greedy hits the optimum 270.',
     matrix: [
       [db5, db5, db5, 60, 40],
       [50, 40, 55, 70, 45],
@@ -33,7 +33,7 @@ export const EDGE_CASES: EdgeCase[] = [
     id: 'greedy-trap',
     name: 'Greedy Trap',
     blurb:
-      'Looks normal and a perfect matching exists (294) — yet greedy strands B1. B1 can only match G2 or G3, and both columns are snatched away: B0 grabs the shiny 94, B4 takes 59. Everyone is saved only if B0 settles for 49.',
+      'Looks normal and a perfect matching exists (294) — yet greedy strands B2. B2 can only match G3 or G4, and both columns are snatched away: B1 grabs the shiny 94, B5 takes 59. Everyone is saved only if B1 settles for 49.',
     matrix: [
       [db5, 49, db5, 94, db5],
       [db5, db5, 43, 60, db5],
@@ -46,7 +46,7 @@ export const EDGE_CASES: EdgeCase[] = [
     id: 'crowded-hearts',
     name: 'Crowded Hearts',
     blurb:
-      'Every boy has at least two options, but no algorithm can match everyone: B0, B1 and B2 collectively only like G0 and G1 — three boys, two girls (Hall’s theorem). Watch B0 get skipped.',
+      'Every boy has at least two options, but no algorithm can match everyone: B1, B2 and B3 collectively only like G1 and G2 — three boys, two girls (Hall’s theorem). Watch B1 get skipped.',
     matrix: [
       [80, 75, db5, db5, db5],
       [78, 72, db5, db5, db5],

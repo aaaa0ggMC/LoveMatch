@@ -100,7 +100,7 @@ export const PairList: React.FC<PairListProps> = ({ pairs, n }) => {
                   fontSize: 11,
                 }}
               >
-                B{p.boy}
+                B{p.boy + 1}
               </span>
               <Heart beat={idx === pairs.length - 1} />
               <span
@@ -117,7 +117,7 @@ export const PairList: React.FC<PairListProps> = ({ pairs, n }) => {
                   fontSize: 11,
                 }}
               >
-                G{p.girl}
+                G{p.girl + 1}
               </span>
               <span
                 style={{
