@@ -16,9 +16,12 @@ export interface MatrixState {
 export type StepType =
   // Hungarian
   | 'init'
-  | 'init_cost'
-  | 'reduce_rows'
-  | 'reduce_cols'
+  | 'find_max'
+  | 'build_cost'
+  | 'scan_row_min'
+  | 'reduce_row'
+  | 'scan_col_min'
+  | 'reduce_col'
   | 'find_zeros'
   | 'cover_zeros'
   | 'find_delta'
@@ -53,6 +56,12 @@ export interface AlgorithmStep {
   // ---------- Hungarian ----------
   /** highest value in the original relation matrix */
   H?: number
+  /** position of H in the original matrix */
+  maxPos?: { i: number; j: number }
+  /** current row being processed (row reduction) */
+  currentRow?: number
+  /** current column being processed (col reduction) */
+  currentCol?: number
   /** row minima used in row reduction */
   rowMin?: number[]
   /** column minima used in column reduction */

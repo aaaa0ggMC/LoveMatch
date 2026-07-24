@@ -46,7 +46,6 @@ function maxZeroMatching(cost: number[][], n: number): { matchR: number[]; match
   const matchR = new Array<number>(n).fill(-1)
   const matchC = new Array<number>(n).fill(-1)
 
-  // BFS layers
   const dist = new Array<number>(n)
   const queue: number[] = []
 
@@ -107,7 +106,6 @@ function minZeroCover(
   matchR: number[],
   matchC: number[],
 ): { coveredRows: boolean[]; coveredCols: boolean[] } {
-  // Start from unmatched rows, alternate via zero edges
   const visitedR = new Array<boolean>(n).fill(false)
   const visitedC = new Array<boolean>(n).fill(false)
 
@@ -137,7 +135,6 @@ function minZeroCover(
     }
   }
 
-  // König: cover = (rows not visited) ∪ (cols visited)
   const coveredRows = visitedR.map((v) => !v)
   const coveredCols = visitedC
   return { coveredRows, coveredCols }
@@ -165,35 +162,58 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
       totalScore,
       `Initial relation matrix of ${n} boys and ${n} girls. Each cell shows the like-score; negative values are deal-breakers (DB = ${DB}).`,
       'Initial Matrix',
+      { DB },
     ),
   )
 
-  // ---------- preprocessing: build cost matrix ----------
+  // ---------- find H (max value) ----------
   let H = -Infinity
+  let maxI = 0
+  let maxJ = 0
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) {
-      if (values[i][j] > H) H = values[i][j]
+      if (values[i][j] > H) {
+        H = values[i][j]
+        maxI = i
+        maxJ = j
+      }
     }
   }
 
+  steps.push(
+    stepBase(
+      'find_max',
+      values,
+      activeRows,
+      activeCols,
+      n,
+      pairs,
+      totalScore,
+      `Scanning for the highest like-score H. Found H = ${H} at cell (B${maxI + 1}, G${maxJ + 1}).`,
+      'Find Maximum',
+      { H, DB, maxPos: { i: maxI, j: maxJ } },
+    ),
+  )
+
+  // ---------- build cost matrix ----------
   const cost: number[][] = values.map((row) => row.map((v) => H - v))
 
   steps.push(
     stepBase(
-      'init_cost',
+      'build_cost',
       cost,
       activeRows,
       activeCols,
       n,
       pairs,
       totalScore,
-      `Converted to cost matrix: Cost[i][j] = H − Relation[i][j], where H = ${H}. Deal-breakers become ${H - DB}.`,
+      `Converted to cost matrix: Cost[i][j] = H − Relation[i][j] = ${H} − Relation[i][j]. Deal-breakers become ${H - DB}.`,
       'Build Cost Matrix',
-      { H, DB },
+      { H, DB, maxPos: { i: maxI, j: maxJ } },
     ),
   )
 
-  // ---------- step 1: row reduction ----------
+  // ---------- row reduction: scan row minima ----------
   const reduced: number[][] = cost.map((row) => [...row])
   const rowMin = new Array<number>(n).fill(0)
 
@@ -201,47 +221,85 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
     let mn = Infinity
     for (let j = 0; j < n; j++) if (reduced[i][j] < mn) mn = reduced[i][j]
     rowMin[i] = mn
-    for (let j = 0; j < n; j++) reduced[i][j] -= mn
+
+    steps.push(
+      stepBase(
+        'scan_row_min',
+        reduced,
+        activeRows,
+        activeCols,
+        n,
+        pairs,
+        totalScore,
+        `Row B${i + 1}: minimum value is ${mn}.`,
+        `Scan Row Minima`,
+        { H, DB, rowMin: [...rowMin], currentRow: i },
+      ),
+    )
   }
 
-  steps.push(
-    stepBase(
-      'reduce_rows',
-      reduced,
-      activeRows,
-      activeCols,
-      n,
-      pairs,
-      totalScore,
-      `Row reduction: subtracted each row's minimum from every cell in that row. Row minima: [${rowMin.join(', ')}].`,
-      'Reduce Rows',
-      { rowMin },
-    ),
-  )
+  // ---------- row reduction: apply ----------
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) reduced[i][j] -= rowMin[i]
 
-  // ---------- step 1: column reduction ----------
+    steps.push(
+      stepBase(
+        'reduce_row',
+        reduced,
+        activeRows,
+        activeCols,
+        n,
+        pairs,
+        totalScore,
+        `Row B${i + 1}: subtracted ${rowMin[i]} from every cell. Row minima so far: [${rowMin.slice(0, i + 1).join(', ')}].`,
+        `Reduce Rows`,
+        { H, DB, rowMin: [...rowMin], currentRow: i },
+      ),
+    )
+  }
+
+  // ---------- column reduction: scan col minima ----------
   const colMin = new Array<number>(n).fill(0)
   for (let j = 0; j < n; j++) {
     let mn = Infinity
     for (let i = 0; i < n; i++) if (reduced[i][j] < mn) mn = reduced[i][j]
     colMin[j] = mn
-    for (let i = 0; i < n; i++) reduced[i][j] -= mn
+
+    steps.push(
+      stepBase(
+        'scan_col_min',
+        reduced,
+        activeRows,
+        activeCols,
+        n,
+        pairs,
+        totalScore,
+        `Column G${j + 1}: minimum value is ${mn}.`,
+        `Scan Column Minima`,
+        { H, DB, rowMin, colMin: [...colMin], currentCol: j },
+      ),
+    )
   }
 
-  steps.push(
-    stepBase(
-      'reduce_cols',
-      reduced,
-      activeRows,
-      activeCols,
-      n,
-      pairs,
-      totalScore,
-      `Column reduction: subtracted each column's minimum from every cell in that column. Column minima: [${colMin.join(', ')}].`,
-      'Reduce Columns',
-      { colMin },
-    ),
-  )
+  // ---------- column reduction: apply ----------
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) reduced[i][j] -= colMin[j]
+
+    steps.push(
+      stepBase(
+        'reduce_col',
+        reduced,
+        activeRows,
+        activeCols,
+        n,
+        pairs,
+        totalScore,
+        `Column G${j + 1}: subtracted ${colMin[j]} from every cell. Column minima so far: [${colMin.slice(0, j + 1).join(', ')}].`,
+        `Reduce Columns`,
+        { H, DB, rowMin, colMin: [...colMin], currentCol: j },
+      ),
+    )
+  }
 
   // ---------- steps 2–4: iterate until perfect matching ----------
   let iteration = 0
@@ -272,6 +330,8 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         `Iteration ${iteration}: found a maximum matching of ${matchSize} independent zero(s). ${matchSize === n ? 'A perfect assignment exists!' : `Need ${n - matchSize} more.`}`,
         'Find Zero Matching',
         {
+          H,
+          DB,
           iteration,
           matchSize,
           zeroMatching: matchedPairs,
@@ -303,6 +363,8 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         `Minimum line cover: ${coveredRowList.length} row(s) [${coveredRowList.map((i) => `B${i + 1}`).join(', ')}] and ${coveredColList.length} column(s) [${coveredColList.map((j) => `G${j + 1}`).join(', ')}]. Total lines: ${coveredRowList.length + coveredColList.length}.`,
         'Cover Zeros',
         {
+          H,
+          DB,
           iteration,
           coveredRows: [...coveredRows],
           coveredCols: [...coveredCols],
@@ -314,11 +376,17 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
 
     // ---------- find delta ----------
     let delta = Infinity
+    let deltaI = -1
+    let deltaJ = -1
     for (let i = 0; i < n; i++) {
       if (coveredRows[i]) continue
       for (let j = 0; j < n; j++) {
         if (coveredCols[j]) continue
-        if (reduced[i][j] < delta) delta = reduced[i][j]
+        if (reduced[i][j] < delta) {
+          delta = reduced[i][j]
+          deltaI = i
+          deltaJ = j
+        }
       }
     }
 
@@ -331,9 +399,11 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         n,
         pairs,
         totalScore,
-        `Smallest uncovered value: δ = ${delta}.`,
+        `Smallest uncovered value: δ = ${delta} at cell (B${deltaI + 1}, G${deltaJ + 1}).`,
         'Find Delta',
         {
+          H,
+          DB,
           iteration,
           delta,
           coveredRows: [...coveredRows],
@@ -364,9 +434,11 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
         n,
         pairs,
         totalScore,
-        `Adjusted matrix: subtracted δ from uncovered cells, added δ to doubly-covered cells.`,
+        `Adjusted matrix: subtracted δ = ${delta} from uncovered cells, added δ to doubly-covered cells. Singly-covered cells unchanged.`,
         'Adjust Matrix',
         {
+          H,
+          DB,
           iteration,
           delta,
           coveredRows: [...coveredRows],
@@ -406,6 +478,8 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
       `Extracted ${finalPairs.length} valid pair(s) from the assignment. Total score: ${ts}.`,
       'Extract Pairs',
       {
+        H,
+        DB,
         unmatchedB: [...unmatchedB],
         unmatchedG: [...unmatchedG],
         assignment: matchR.map((j, i) => ({ i, j })),
@@ -437,6 +511,8 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
       parts.join(' '),
       'Complete',
       {
+        H,
+        DB,
         unmatchedB: [...unmatchedB],
         unmatchedG: [...unmatchedG],
       },

@@ -118,7 +118,11 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey)
   }, [handleNext, handlePrev, view])
 
-  const isCostView = step.type !== 'init' && step.type !== 'complete' && step.type !== 'extract_pairs'
+  const isCostView =
+    step.type !== 'init' &&
+    step.type !== 'find_max' &&
+    step.type !== 'complete' &&
+    step.type !== 'extract_pairs'
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>

@@ -14,8 +14,11 @@ interface MatrixProps {
 }
 
 /** soft rose heat color for like-scores in [0, 100] */
-function scoreStyle(value: number): React.CSSProperties {
+function scoreStyle(value: number, gradient: boolean): React.CSSProperties {
   if (value < 0) return {}
+  if (!gradient) {
+    return { background: 'rgb(255, 223, 228)', color: 'var(--ink)', fontWeight: 500 }
+  }
   const ratio = Math.min(value / 100, 1)
   const r = 255
   const g = Math.round(255 - ratio * 160)
@@ -28,7 +31,10 @@ function scoreStyle(value: number): React.CSSProperties {
 }
 
 /** cost-matrix heat: lower cost = better = redder */
-function costStyle(value: number, maxVal: number): React.CSSProperties {
+function costStyle(value: number, maxVal: number, gradient: boolean): React.CSSProperties {
+  if (!gradient) {
+    return { background: 'rgb(255, 223, 228)', color: 'var(--ink)', fontWeight: 500 }
+  }
   if (maxVal <= 0) return {}
   const ratio = Math.min(value / maxVal, 1)
   // invert: low cost = red, high cost = pale
@@ -77,13 +83,42 @@ export const Matrix: React.FC<MatrixProps> = ({
   const highlight = (i: number, j: number): HL => {
     if (!activeRows[i] || !activeCols[j]) return null
 
-    // Hungarian algorithm highlights
+    // ---------- Hungarian algorithm highlights ----------
+
+    // find_max: highlight the maximum value cell
+    if (type === 'find_max' && step.maxPos) {
+      if (step.maxPos.i === i && step.maxPos.j === j)
+        return { ring: 'var(--emerald)', bg: '#d1fae5', fg: '#065f46' }
+    }
+
+    // build_cost: show the max position
+    if (type === 'build_cost' && step.maxPos) {
+      if (step.maxPos.i === i && step.maxPos.j === j)
+        return { ring: 'var(--emerald)', bg: '#d1fae5', fg: '#065f46' }
+    }
+
+    // scan_row_min / reduce_row: highlight current row and its min
+    if ((type === 'scan_row_min' || type === 'reduce_row') && step.currentRow === i) {
+      if (step.rowMin && values[i][j] === step.rowMin[i])
+        return { ring: '#f97316', bg: '#ffedd5', fg: '#9a3412' }
+      return { ring: 'transparent', bg: '#fff7ed' }
+    }
+
+    // scan_col_min / reduce_col: highlight current col and its min
+    if ((type === 'scan_col_min' || type === 'reduce_col') && step.currentCol === j) {
+      if (step.colMin && values[i][j] === step.colMin[j])
+        return { ring: '#f97316', bg: '#ffedd5', fg: '#9a3412' }
+      return { ring: 'transparent', bg: '#fff7ed' }
+    }
+
+    // find_zeros: highlight matched zeros
     if (type === 'find_zeros' && step.zeroMatching) {
       const isMatched = step.zeroMatching.some((p) => p.i === i && p.j === j)
       if (isMatched) return { ring: 'var(--emerald)', bg: '#d1fae5', fg: '#065f46' }
       if (values[i][j] === 0) return { ring: 'transparent', bg: '#f0fdf4' }
     }
 
+    // cover_zeros: show covered lines
     if (type === 'cover_zeros') {
       const rCov = step.coveredRows?.[i]
       const cCov = step.coveredCols?.[j]
@@ -91,26 +126,30 @@ export const Matrix: React.FC<MatrixProps> = ({
       if (rCov || cCov) return { ring: 'transparent', bg: '#fef3c7' }
     }
 
+    // find_delta: highlight uncovered region and delta cell
     if (type === 'find_delta') {
       const rCov = step.coveredRows?.[i]
       const cCov = step.coveredCols?.[j]
       if (!rCov && !cCov) {
-        if (values[i][j] === step.delta) return { ring: '#f97316', bg: '#ffedd5', fg: '#9a3412' }
+        if (values[i][j] === step.delta)
+          return { ring: '#f97316', bg: '#ffedd5', fg: '#9a3412' }
         return { ring: 'transparent', bg: '#fff7ed' }
       }
       if (rCov && cCov) return { ring: 'transparent', bg: '#e0e7ff' }
       return { ring: 'transparent', bg: '#f5f5f4' }
     }
 
+    // adjust_matrix: show what happened to each cell
     if (type === 'adjust_matrix') {
       const rCov = step.coveredRows?.[i]
       const cCov = step.coveredCols?.[j]
-      if (!rCov && !cCov) return { ring: 'transparent', bg: '#dcfce7' }
-      if (rCov && cCov) return { ring: 'transparent', bg: '#fee2e2' }
-      return { ring: 'transparent', bg: '#f5f5f4' }
+      if (!rCov && !cCov) return { ring: 'transparent', bg: '#dcfce7' } // uncovered: −δ
+      if (rCov && cCov) return { ring: 'transparent', bg: '#fee2e2' } // doubly covered: +δ
+      return { ring: 'transparent', bg: '#f5f5f4' } // singly covered: unchanged
     }
 
-    if (type === 'extract_pairs' && step.assignment) {
+    // extract_pairs / complete: highlight final assignment
+    if ((type === 'extract_pairs' || type === 'complete') && step.assignment) {
       const isAssigned = step.assignment.some((p) => p.i === i && p.j === j)
       if (isAssigned) {
         const origVal = step.matrix.values[i][j]
@@ -119,22 +158,51 @@ export const Matrix: React.FC<MatrixProps> = ({
       }
     }
 
-    if (type === 'complete' && step.assignment) {
-      const isAssigned = step.assignment.some((p) => p.i === i && p.j === j)
-      if (isAssigned) {
-        const origVal = step.matrix.values[i][j]
-        if (origVal < 0) return { ring: '#dc2626', bg: '#fecaca', fg: '#991b1b' }
-        return { ring: 'var(--emerald)', bg: '#d1fae5', fg: '#065f46' }
-      }
+    // ---------- Greedy baseline highlights ----------
+    const cc = step.chosenCell
+    if (type === 'commit_pair' && cc && cc.i === i && cc.j === j)
+      return { ring: 'var(--emerald)', bg: '#d1fae5', fg: '#065f46' }
+    if (type === 'select_db_cell' && cc && cc.i === i && cc.j === j)
+      return { ring: '#f97316', bg: '#ffedd5', fg: '#9a3412' }
+    if (type === 'select_regret' && cc && cc.i === i && cc.j === j)
+      return { ring: 'var(--violet)', bg: '#ede9fe', fg: '#5b21b6' }
+    if (type === 'select_regret' && step.chosenRegretLine) {
+      const cl = step.chosenRegretLine
+      if ((cl.kind === 'row' && cl.index === i) || (cl.kind === 'col' && cl.index === j))
+        return { ring: 'transparent', bg: 'var(--violet-soft)' }
+    }
+    if (type === 'select_db_line' && step.chosenLine) {
+      const cl = step.chosenLine
+      if ((cl.kind === 'row' && cl.index === i) || (cl.kind === 'col' && cl.index === j))
+        return { ring: 'transparent', bg: 'var(--amber-soft)' }
+    }
+    if (type === 'skip_line' && step.chosenLine) {
+      const cl = step.chosenLine
+      if ((cl.kind === 'row' && cl.index === i) || (cl.kind === 'col' && cl.index === j))
+        return { ring: '#dc2626', bg: '#fecaca', fg: '#991b1b' }
     }
 
     return null
   }
 
+  /** number of feasible (non-DB) entries left in row i / column j */
+  const rowEntries = (i: number): number => {
+    let c = 0
+    for (let j = 0; j < n; j++) if (activeCols[j] && values[i][j] >= 0) c++
+    return c
+  }
+  const colEntries = (j: number): number => {
+    let c = 0
+    for (let i = 0; i < n; i++) if (activeRows[i] && values[i][j] >= 0) c++
+    return c
+  }
+
   const rowTag = (i: number): { text: string; strong: boolean; danger?: boolean } | null => {
     if (!activeRows[i]) return null
-    if (type === 'reduce_rows' && step.rowMin) {
-      return { text: `−${step.rowMin[i]}`, strong: false }
+
+    // Hungarian tags
+    if ((type === 'scan_row_min' || type === 'reduce_row') && step.rowMin) {
+      return { text: `min = ${step.rowMin[i]}`, strong: type === 'reduce_row' && step.currentRow === i }
     }
     if (type === 'cover_zeros' && step.coveredRows) {
       return step.coveredRows[i] ? { text: 'covered', strong: true } : null
@@ -142,13 +210,37 @@ export const Matrix: React.FC<MatrixProps> = ({
     if (type === 'find_delta' && step.coveredRows) {
       return step.coveredRows[i] ? { text: 'covered', strong: true } : { text: 'uncovered', strong: false }
     }
+
+    // Greedy tags
+    if ((type === 'scan_db' || type === 'select_db_line') && step.rowDB) {
+      const candR = type === 'select_db_line' ? step.candidateRegretRow?.[i] : null
+      return {
+        text: candR != null ? `DB ×${step.rowDB[i]} · R=${candR}` : `DB ×${step.rowDB[i]}`,
+        strong:
+          type === 'select_db_line' &&
+          step.chosenLine?.kind === 'row' &&
+          step.chosenLine.index === i,
+      }
+    }
+    if (type === 'skip_line' && step.rowDB && step.chosenLine?.kind === 'row' && step.chosenLine.index === i)
+      return { text: `DB ×${step.rowDB[i]} — skip`, strong: true, danger: true }
+    if (type === 'scan_best_values' && step.best1 && step.best2)
+      return { text: `${step.best1[i]} − ${rowEntries(i) <= 1 ? '∅' : step.best2[i]}`, strong: false }
+    if (type === 'calc_regret' && step.regret) return { text: `R = ${step.regret[i]}`, strong: false }
+    if (type === 'select_regret' && step.regret)
+      return {
+        text: `R = ${step.regret[i]}`,
+        strong: step.chosenRegretLine?.kind === 'row' && step.chosenRegretLine.index === i,
+      }
     return null
   }
 
   const colTag = (j: number): { text: string; strong: boolean; danger?: boolean } | null => {
     if (!activeCols[j]) return null
-    if (type === 'reduce_cols' && step.colMin) {
-      return { text: `−${step.colMin[j]}`, strong: false }
+
+    // Hungarian tags
+    if ((type === 'scan_col_min' || type === 'reduce_col') && step.colMin) {
+      return { text: `min = ${step.colMin[j]}`, strong: type === 'reduce_col' && step.currentCol === j }
     }
     if (type === 'cover_zeros' && step.coveredCols) {
       return step.coveredCols[j] ? { text: 'covered', strong: true } : null
@@ -156,11 +248,39 @@ export const Matrix: React.FC<MatrixProps> = ({
     if (type === 'find_delta' && step.coveredCols) {
       return step.coveredCols[j] ? { text: 'covered', strong: true } : { text: 'uncovered', strong: false }
     }
+
+    // Greedy tags
+    if ((type === 'scan_db' || type === 'select_db_line') && step.colDB) {
+      const candR = type === 'select_db_line' ? step.candidateRegretCol?.[j] : null
+      return {
+        text: candR != null ? `DB ×${step.colDB[j]} · R=${candR}` : `DB ×${step.colDB[j]}`,
+        strong:
+          type === 'select_db_line' &&
+          step.chosenLine?.kind === 'col' &&
+          step.chosenLine.index === j,
+      }
+    }
+    if (type === 'skip_line' && step.colDB && step.chosenLine?.kind === 'col' && step.chosenLine.index === j)
+      return { text: `DB ×${step.colDB[j]} — skip`, strong: true, danger: true }
+    if (type === 'scan_best_values' && step.colBest1 && step.colBest2)
+      return { text: `${step.colBest1[j]} − ${colEntries(j) <= 1 ? '∅' : step.colBest2[j]}`, strong: false }
+    if (type === 'calc_regret' && step.regretCol) return { text: `R = ${step.regretCol[j]}`, strong: false }
+    if (type === 'select_regret' && step.regretCol)
+      return {
+        text: `R = ${step.regretCol[j]}`,
+        strong: step.chosenRegretLine?.kind === 'col' && step.chosenRegretLine.index === j,
+      }
     return null
   }
 
   const rowHeaderStyle = (i: number): React.CSSProperties => {
     const covered = step.coveredRows?.[i]
+    const chosen =
+      (type === 'select_db_line' || type === 'skip_line') &&
+      step.chosenLine?.kind === 'row' &&
+      step.chosenLine.index === i
+    const danger = chosen && type === 'skip_line'
+    const isCurrent = (type === 'scan_row_min' || type === 'reduce_row') && step.currentRow === i
     return {
       height: cell,
       display: 'flex',
@@ -169,12 +289,24 @@ export const Matrix: React.FC<MatrixProps> = ({
       fontWeight: 700,
       fontSize: Math.max(11, Math.round(cellSize * 0.24)),
       borderRadius: 10,
-      color: !activeRows[i] ? 'var(--ink-faint)' : covered ? '#b45309' : 'var(--indigo)',
+      color: !activeRows[i]
+        ? 'var(--ink-faint)'
+        : danger
+          ? '#b91c1c'
+          : covered || isCurrent
+            ? '#b45309'
+            : chosen
+              ? '#b45309'
+              : 'var(--indigo)',
       background: !activeRows[i]
         ? 'transparent'
-        : covered
-          ? 'var(--amber-soft)'
-          : 'var(--indigo-soft)',
+        : danger
+          ? '#fee2e2'
+          : covered || isCurrent
+            ? 'var(--amber-soft)'
+            : chosen
+              ? 'var(--amber-soft)'
+              : 'var(--indigo-soft)',
       textDecoration: !activeRows[i] ? 'line-through' : 'none',
       transition: 'all .25s ease',
     }
@@ -182,6 +314,12 @@ export const Matrix: React.FC<MatrixProps> = ({
 
   const colHeaderStyle = (j: number): React.CSSProperties => {
     const covered = step.coveredCols?.[j]
+    const chosen =
+      (type === 'select_db_line' || type === 'skip_line') &&
+      step.chosenLine?.kind === 'col' &&
+      step.chosenLine.index === j
+    const danger = chosen && type === 'skip_line'
+    const isCurrent = (type === 'scan_col_min' || type === 'reduce_col') && step.currentCol === j
     return {
       width: cell,
       display: 'flex',
@@ -190,12 +328,24 @@ export const Matrix: React.FC<MatrixProps> = ({
       fontWeight: 700,
       fontSize: Math.max(11, Math.round(cellSize * 0.24)),
       borderRadius: 10,
-      color: !activeCols[j] ? 'var(--ink-faint)' : covered ? '#b45309' : 'var(--rose)',
+      color: !activeCols[j]
+        ? 'var(--ink-faint)'
+        : danger
+          ? '#b91c1c'
+          : covered || isCurrent
+            ? '#b45309'
+            : chosen
+              ? '#b45309'
+              : 'var(--rose)',
       background: !activeCols[j]
         ? 'transparent'
-        : covered
-          ? 'var(--amber-soft)'
-          : 'var(--rose-soft)',
+        : danger
+          ? '#fee2e2'
+          : covered || isCurrent
+            ? 'var(--amber-soft)'
+            : chosen
+              ? 'var(--amber-soft)'
+              : 'var(--rose-soft)',
       textDecoration: !activeCols[j] ? 'line-through' : 'none',
       transition: 'all .25s ease',
     }
@@ -254,10 +404,8 @@ export const Matrix: React.FC<MatrixProps> = ({
                     : isDB
                       ? { color: '#a8a29e', fontWeight: 600, fontSize: dbFontSize, letterSpacing: 0.5 }
                       : isCostView
-                        ? costStyle(v, maxVal)
-                        : showGradient
-                          ? scoreStyle(v)
-                          : scoreStyle(30)),
+                        ? costStyle(v, maxVal, showGradient)
+                        : scoreStyle(v, showGradient)),
                   ...(hl
                     ? {
                         background: hl.bg,

@@ -6,20 +6,37 @@ const paths: Record<StepType, React.ReactNode> = {
   init: (
     <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" strokeLinejoin="round" />
   ),
-  init_cost: (
+  find_max: (
+    <>
+      <path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.5 9.2l5.9-.9z" strokeLinejoin="round" />
+    </>
+  ),
+  build_cost: (
     <>
       <path d="M4 4h16v16H4z" strokeLinejoin="round" />
       <path d="M9 9h6v6H9z" strokeLinejoin="round" />
       <path d="M12 4v5M12 15v5M4 12h5M15 12h5" strokeLinecap="round" />
     </>
   ),
-  reduce_rows: (
+  scan_row_min: (
+    <>
+      <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
+      <circle cx="9" cy="12" r="2.2" fill="currentColor" stroke="none" />
+    </>
+  ),
+  reduce_row: (
     <>
       <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
       <path d="M8 6v12M16 6v12" strokeLinecap="round" opacity="0.4" />
     </>
   ),
-  reduce_cols: (
+  scan_col_min: (
+    <>
+      <path d="M6 4v16M12 4v16M18 4v16" strokeLinecap="round" />
+      <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+    </>
+  ),
+  reduce_col: (
     <>
       <path d="M6 4v16M12 4v16M18 4v16" strokeLinecap="round" />
       <path d="M6 8h12M6 16h12" strokeLinecap="round" opacity="0.4" />
@@ -127,9 +144,12 @@ const paths: Record<StepType, React.ReactNode> = {
 const tones: Record<StepType, { fg: string; bg: string }> = {
   // Hungarian
   init: { fg: 'var(--ink-soft)', bg: '#f5f5f4' },
-  init_cost: { fg: '#0369a1', bg: '#e0f2fe' },
-  reduce_rows: { fg: '#7c3aed', bg: '#ede9fe' },
-  reduce_cols: { fg: '#7c3aed', bg: '#ede9fe' },
+  find_max: { fg: '#0369a1', bg: '#e0f2fe' },
+  build_cost: { fg: '#0369a1', bg: '#e0f2fe' },
+  scan_row_min: { fg: '#7c3aed', bg: '#ede9fe' },
+  reduce_row: { fg: '#7c3aed', bg: '#ede9fe' },
+  scan_col_min: { fg: '#7c3aed', bg: '#ede9fe' },
+  reduce_col: { fg: '#7c3aed', bg: '#ede9fe' },
   find_zeros: { fg: '#059669', bg: '#d1fae5' },
   cover_zeros: { fg: '#d97706', bg: '#fef3c7' },
   find_delta: { fg: '#ea580c', bg: '#ffedd5' },
