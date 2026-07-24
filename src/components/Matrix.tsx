@@ -97,18 +97,16 @@ export const Matrix: React.FC<MatrixProps> = ({
         return { ring: 'var(--emerald)', bg: '#d1fae5', fg: '#065f46' }
     }
 
-    // scan_row_min / reduce_row: highlight current row and its min
-    if ((type === 'scan_row_min' || type === 'reduce_row') && step.currentRow === i) {
+    // scan_row_min / reduce_row: highlight each row's minimum cell
+    if (type === 'scan_row_min' || type === 'reduce_row') {
       if (step.rowMin && values[i][j] === step.rowMin[i])
         return { ring: '#f97316', bg: '#ffedd5', fg: '#9a3412' }
-      return { ring: 'transparent', bg: '#fff7ed' }
     }
 
-    // scan_col_min / reduce_col: highlight current col and its min
-    if ((type === 'scan_col_min' || type === 'reduce_col') && step.currentCol === j) {
+    // scan_col_min / reduce_col: highlight each col's minimum cell
+    if (type === 'scan_col_min' || type === 'reduce_col') {
       if (step.colMin && values[i][j] === step.colMin[j])
         return { ring: '#f97316', bg: '#ffedd5', fg: '#9a3412' }
-      return { ring: 'transparent', bg: '#fff7ed' }
     }
 
     // find_zeros: highlight matched zeros
@@ -202,7 +200,7 @@ export const Matrix: React.FC<MatrixProps> = ({
 
     // Hungarian tags
     if ((type === 'scan_row_min' || type === 'reduce_row') && step.rowMin) {
-      return { text: `min = ${step.rowMin[i]}`, strong: type === 'reduce_row' && step.currentRow === i }
+      return { text: `min = ${step.rowMin[i]}`, strong: type === 'reduce_row' }
     }
     if (type === 'cover_zeros' && step.coveredRows) {
       return step.coveredRows[i] ? { text: 'covered', strong: true } : null
@@ -240,7 +238,7 @@ export const Matrix: React.FC<MatrixProps> = ({
 
     // Hungarian tags
     if ((type === 'scan_col_min' || type === 'reduce_col') && step.colMin) {
-      return { text: `min = ${step.colMin[j]}`, strong: type === 'reduce_col' && step.currentCol === j }
+      return { text: `min = ${step.colMin[j]}`, strong: type === 'reduce_col' }
     }
     if (type === 'cover_zeros' && step.coveredCols) {
       return step.coveredCols[j] ? { text: 'covered', strong: true } : null
@@ -280,7 +278,7 @@ export const Matrix: React.FC<MatrixProps> = ({
       step.chosenLine?.kind === 'row' &&
       step.chosenLine.index === i
     const danger = chosen && type === 'skip_line'
-    const isCurrent = (type === 'scan_row_min' || type === 'reduce_row') && step.currentRow === i
+    const isCurrent = false
     return {
       height: cell,
       display: 'flex',
@@ -319,7 +317,7 @@ export const Matrix: React.FC<MatrixProps> = ({
       step.chosenLine?.kind === 'col' &&
       step.chosenLine.index === j
     const danger = chosen && type === 'skip_line'
-    const isCurrent = (type === 'scan_col_min' || type === 'reduce_col') && step.currentCol === j
+    const isCurrent = false
     return {
       width: cell,
       display: 'flex',

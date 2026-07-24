@@ -221,42 +221,42 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
     let mn = Infinity
     for (let j = 0; j < n; j++) if (reduced[i][j] < mn) mn = reduced[i][j]
     rowMin[i] = mn
-
-    steps.push(
-      stepBase(
-        'scan_row_min',
-        reduced,
-        activeRows,
-        activeCols,
-        n,
-        pairs,
-        totalScore,
-        `Row B${i + 1}: minimum value is ${mn}.`,
-        `Scan Row Minima`,
-        { H, DB, rowMin: [...rowMin], currentRow: i },
-      ),
-    )
   }
+
+  steps.push(
+    stepBase(
+      'scan_row_min',
+      reduced,
+      activeRows,
+      activeCols,
+      n,
+      pairs,
+      totalScore,
+      `Row minima: [${rowMin.map((mn, i) => `B${i + 1}: ${mn}`).join(', ')}].`,
+      `Scan Row Minima`,
+      { H, DB, rowMin: [...rowMin] },
+    ),
+  )
 
   // ---------- row reduction: apply ----------
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) reduced[i][j] -= rowMin[i]
-
-    steps.push(
-      stepBase(
-        'reduce_row',
-        reduced,
-        activeRows,
-        activeCols,
-        n,
-        pairs,
-        totalScore,
-        `Row B${i + 1}: subtracted ${rowMin[i]} from every cell. Row minima so far: [${rowMin.slice(0, i + 1).join(', ')}].`,
-        `Reduce Rows`,
-        { H, DB, rowMin: [...rowMin], currentRow: i },
-      ),
-    )
   }
+
+  steps.push(
+    stepBase(
+      'reduce_row',
+      reduced,
+      activeRows,
+      activeCols,
+      n,
+      pairs,
+      totalScore,
+      `Subtracted each row's minimum from every cell in that row: [${rowMin.join(', ')}]. Each row now contains at least one zero.`,
+      `Reduce Rows`,
+      { H, DB, rowMin: [...rowMin] },
+    ),
+  )
 
   // ---------- column reduction: scan col minima ----------
   const colMin = new Array<number>(n).fill(0)
@@ -264,42 +264,42 @@ export function computeSteps(values: number[][], n: number): AlgorithmStep[] {
     let mn = Infinity
     for (let i = 0; i < n; i++) if (reduced[i][j] < mn) mn = reduced[i][j]
     colMin[j] = mn
-
-    steps.push(
-      stepBase(
-        'scan_col_min',
-        reduced,
-        activeRows,
-        activeCols,
-        n,
-        pairs,
-        totalScore,
-        `Column G${j + 1}: minimum value is ${mn}.`,
-        `Scan Column Minima`,
-        { H, DB, rowMin, colMin: [...colMin], currentCol: j },
-      ),
-    )
   }
+
+  steps.push(
+    stepBase(
+      'scan_col_min',
+      reduced,
+      activeRows,
+      activeCols,
+      n,
+      pairs,
+      totalScore,
+      `Column minima: [${colMin.map((mn, j) => `G${j + 1}: ${mn}`).join(', ')}].`,
+      `Scan Column Minima`,
+      { H, DB, rowMin, colMin: [...colMin] },
+    ),
+  )
 
   // ---------- column reduction: apply ----------
   for (let j = 0; j < n; j++) {
     for (let i = 0; i < n; i++) reduced[i][j] -= colMin[j]
-
-    steps.push(
-      stepBase(
-        'reduce_col',
-        reduced,
-        activeRows,
-        activeCols,
-        n,
-        pairs,
-        totalScore,
-        `Column G${j + 1}: subtracted ${colMin[j]} from every cell. Column minima so far: [${colMin.slice(0, j + 1).join(', ')}].`,
-        `Reduce Columns`,
-        { H, DB, rowMin, colMin: [...colMin], currentCol: j },
-      ),
-    )
   }
+
+  steps.push(
+    stepBase(
+      'reduce_col',
+      reduced,
+      activeRows,
+      activeCols,
+      n,
+      pairs,
+      totalScore,
+      `Subtracted each column's minimum from every cell in that column: [${colMin.join(', ')}]. Each column now contains at least one zero.`,
+      `Reduce Columns`,
+      { H, DB, rowMin, colMin: [...colMin] },
+    ),
+  )
 
   // ---------- steps 2–4: iterate until perfect matching ----------
   let iteration = 0
