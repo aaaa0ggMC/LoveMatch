@@ -13,20 +13,16 @@ const items: { swatch: React.CSSProperties; label: string }[] = [
     label: 'Deal-breaker (DB)',
   },
   {
-    swatch: { background: '#fffbeb', boxShadow: 'inset 0 0 0 2px #fcd34d' },
-    label: 'Most-constrained line',
+    swatch: { background: '#d1fae5', boxShadow: 'inset 0 0 0 2px #10b981' },
+    label: 'Matched zero / committed pair',
+  },
+  {
+    swatch: { background: '#fef3c7', boxShadow: 'inset 0 0 0 2px #f59e0b' },
+    label: 'Covered line',
   },
   {
     swatch: { background: '#ffedd5', boxShadow: 'inset 0 0 0 2px #f97316' },
-    label: 'Chosen cell (DB mode)',
-  },
-  {
-    swatch: { background: '#ede9fe', boxShadow: 'inset 0 0 0 2px #8b5cf6' },
-    label: 'Chosen cell (regret mode)',
-  },
-  {
-    swatch: { background: '#d1fae5', boxShadow: 'inset 0 0 0 2px #10b981' },
-    label: 'Committed pair',
+    label: 'Delta cell',
   },
   {
     swatch: { background: '#f5f5f4', opacity: 0.5 },

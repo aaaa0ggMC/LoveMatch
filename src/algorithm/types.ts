@@ -14,7 +14,18 @@ export interface MatrixState {
 }
 
 export type StepType =
+  // Hungarian
   | 'init'
+  | 'init_cost'
+  | 'reduce_rows'
+  | 'reduce_cols'
+  | 'find_zeros'
+  | 'cover_zeros'
+  | 'find_delta'
+  | 'adjust_matrix'
+  | 'extract_pairs'
+  | 'complete'
+  // Greedy baseline
   | 'scan_db'
   | 'select_db_line'
   | 'select_db_cell'
@@ -25,7 +36,6 @@ export type StepType =
   | 'select_regret'
   | 'commit_pair'
   | 'remove_rowcol'
-  | 'complete'
   | 'infeasible'
 
 export interface AlgorithmStep {
@@ -36,37 +46,60 @@ export interface AlgorithmStep {
   description: string
   phaseTitle: string
 
+  // ---------- shared ----------
+  /** deal-breaker sentinel value */
+  DB?: number
+
+  // ---------- Hungarian ----------
+  /** highest value in the original relation matrix */
+  H?: number
+  /** row minima used in row reduction */
+  rowMin?: number[]
+  /** column minima used in column reduction */
+  colMin?: number[]
+  /** current iteration number (1-based) */
+  iteration?: number
+  /** size of the current zero matching */
+  matchSize?: number
+  /** matched zero cells as (row, col) pairs */
+  zeroMatching?: { i: number; j: number }[]
+  /** matchR[i] = j means row i is matched to column j */
+  matchR?: number[]
+  /** matchC[j] = i means column j is matched to row i */
+  matchC?: number[]
+  /** minimum vertex cover: which rows/cols are covered */
+  coveredRows?: boolean[]
+  coveredCols?: boolean[]
+  coveredRowList?: number[]
+  coveredColList?: number[]
+  /** smallest uncovered value δ */
+  delta?: number
+  /** final assignment (row → col) */
+  assignment?: { i: number; j: number }[]
+  /** boys assigned to a deal-breaker */
+  unmatchedB?: number[]
+  /** girls assigned to a deal-breaker */
+  unmatchedG?: number[]
+
+  // ---------- Greedy baseline ----------
   rowDB?: number[]
   colDB?: number[]
-
   chosenLine?: { kind: 'row' | 'col'; index: number; dbCount: number }
-
-  /** DB-mode: every remaining line tied at the maximum DB count */
   candidateLines?: { kind: 'row' | 'col'; index: number }[]
-  /** DB-mode tie-break regret of each candidate row (null = not a candidate) */
   candidateRegretRow?: (number | null)[]
-  /** DB-mode tie-break regret of each candidate column (null = not a candidate) */
   candidateRegretCol?: (number | null)[]
-
   chosenCell?: { i: number; j: number; value: number }
-
   best1?: number[]
   best2?: number[]
   regret?: number[]
-
   colBest1?: number[]
   colBest2?: number[]
   regretCol?: number[]
-
   chosenRegretLine?: { kind: 'row' | 'col'; index: number; regret: number }
-
   chosenRow?: number
   chosenCol?: number
-
   removedRow?: number
   removedCol?: number
-
   removedLine?: { kind: 'row' | 'col'; index: number }
-
   skippedLines?: { kind: 'row' | 'col'; index: number }[]
 }

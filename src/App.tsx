@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback, useEffect } from 'react'
-import { computeSteps } from './algorithm/greedy-bipartite'
+import { computeSteps as computeHungarianSteps } from './algorithm/hungarian'
+import { computeSteps as computeGreedySteps } from './algorithm/greedy-bipartite'
 import { generateMatrix, sampleLikeScore, dbValue, DistSpec, DEFAULT_DIST } from './algorithm/random'
 import { solveOptimal } from './algorithm/km'
 import { AlgorithmStep } from './algorithm/types'
@@ -10,6 +11,8 @@ import { StepInfo } from './components/StepInfo'
 import { Legend } from './components/Legend'
 import { SettingsPanel } from './components/SettingsPanel'
 import { Information } from './components/Information'
+
+type Algorithm = 'hungarian' | 'greedy'
 
 const App: React.FC = () => {
   const [n, setN] = useState(5)
@@ -23,20 +26,24 @@ const App: React.FC = () => {
   )
   const [currentStep, setCurrentStep] = useState(0)
   const [view, setView] = useState<'match' | 'info'>('match')
-  // heat gradient on matrix cells (higher score = redder); off by default,
-  // toggled from the Information view
+  const [algorithm, setAlgorithm] = useState<Algorithm>('hungarian')
   const [showGradient, setShowGradient] = useState(false)
 
-  const steps = useMemo<AlgorithmStep[]>(() => computeSteps(matrix, n), [matrix, n])
+  const steps = useMemo<AlgorithmStep[]>(
+    () => (algorithm === 'hungarian' ? computeHungarianSteps(matrix, n) : computeGreedySteps(matrix, n)),
+    [matrix, n, algorithm],
+  )
   const step = steps[currentStep]
 
   // KM optimum, precomputed for the information view
   const optimal = useMemo(() => solveOptimal(matrix, n), [matrix, n])
+  const greedySteps = useMemo(() => computeGreedySteps(matrix, n), [matrix, n])
+  const greedyFinal = greedySteps[greedySteps.length - 1]
   const finalStep = steps[steps.length - 1]
 
   const canGoNext = currentStep < steps.length - 1
   const canGoPrev = currentStep > 0
-  const isComplete = step.type === 'complete' || step.type === 'infeasible'
+  const isComplete = step.type === 'complete'
 
   const handleNext = useCallback(() => {
     if (canGoNext) setCurrentStep((s) => s + 1)
@@ -83,16 +90,12 @@ const App: React.FC = () => {
     reroll(n, density, dist)
   }, [n, density, dist, reroll])
 
-  // Load an edge-case preset: replace the matrix wholesale and restart.
   const handleLoadPreset = useCallback((m: number[][]) => {
     setN(m.length)
     setMatrix(m.map((r) => [...r]))
     setCurrentStep(0)
   }, [])
 
-  // Runtime cell editing: double-click toggles a cell between like-score and
-  // deal-breaker. Only allowed before stepping starts (currentStep === 0);
-  // the step list recomputes automatically from the edited matrix.
   const handleCellToggle = useCallback(
     (i: number, j: number) => {
       if (currentStep !== 0) return
@@ -114,6 +117,8 @@ const App: React.FC = () => {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [handleNext, handlePrev, view])
+
+  const isCostView = step.type !== 'init' && step.type !== 'complete' && step.type !== 'extract_pairs'
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -153,11 +158,52 @@ const App: React.FC = () => {
                 Love Match
               </div>
               <div className="header-subtitle" style={{ fontSize: 11, color: 'var(--ink-faint)', letterSpacing: 0.4 }}>
-                Greedy Bipartite Matching · Visualized
+                {algorithm === 'hungarian' ? 'Hungarian Algorithm' : 'Greedy Bipartite Matching'} · Visualized
               </div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            {/* algorithm switcher */}
+            <div
+              style={{
+                display: 'flex',
+                background: '#f5f5f4',
+                borderRadius: 10,
+                padding: 3,
+                gap: 2,
+              }}
+            >
+              {(
+                [
+                  { id: 'hungarian', label: 'Hungarian' },
+                  { id: 'greedy', label: 'Greedy' },
+                ] as const
+              ).map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => {
+                    setAlgorithm(t.id)
+                    setCurrentStep(0)
+                  }}
+                  style={{
+                    padding: '5px 12px',
+                    borderRadius: 8,
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    background: algorithm === t.id ? 'var(--surface)' : 'transparent',
+                    color: algorithm === t.id ? 'var(--ink)' : 'var(--ink-faint)',
+                    boxShadow: algorithm === t.id ? '0 1px 3px rgba(28,25,23,0.12)' : 'none',
+                    transition: 'all .15s ease',
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            {/* view switcher */}
             <div
               style={{
                 display: 'flex',
@@ -218,8 +264,11 @@ const App: React.FC = () => {
             n={n}
             matrix={matrix}
             optimal={optimal}
-            greedyScore={finalStep.totalScore}
-            greedyMatched={finalStep.pairs.length}
+            greedyScore={greedyFinal.totalScore}
+            greedyMatched={greedyFinal.pairs.length}
+            hungarianScore={finalStep.totalScore}
+            hungarianMatched={finalStep.pairs.length}
+            currentAlgorithm={algorithm}
             onImport={handleLoadPreset}
             showGradient={showGradient}
             onShowGradientChange={setShowGradient}
@@ -242,6 +291,7 @@ const App: React.FC = () => {
               editable={currentStep === 0}
               onCellToggle={handleCellToggle}
               showGradient={showGradient}
+              isCostView={isCostView}
             />
             {currentStep === 0 && (
               <div

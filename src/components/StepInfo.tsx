@@ -10,16 +10,16 @@ interface StepInfoProps {
 }
 
 const phaseBadge: Partial<Record<StepType, { label: string; color: string; bg: string }>> = {
-  scan_db: { label: 'DEAL-BREAKER MODE', color: '#b45309', bg: '#fef3c7' },
-  select_db_line: { label: 'DEAL-BREAKER MODE', color: '#b45309', bg: '#fef3c7' },
-  select_db_cell: { label: 'DEAL-BREAKER MODE', color: '#b45309', bg: '#fef3c7' },
-  scan_best_values: { label: 'REGRET MODE', color: '#6d28d9', bg: '#ede9fe' },
-  calc_regret: { label: 'REGRET MODE', color: '#6d28d9', bg: '#ede9fe' },
-  select_regret: { label: 'REGRET MODE', color: '#6d28d9', bg: '#ede9fe' },
-  commit_pair: { label: 'MATCHED', color: '#be123c', bg: '#ffe4e6' },
-  skip_line: { label: 'UNMATCHABLE', color: '#b91c1c', bg: '#fee2e2' },
+  init: { label: 'SETUP', color: 'var(--ink-soft)', bg: '#f5f5f4' },
+  init_cost: { label: 'PRE-PROCESSING', color: '#0369a1', bg: '#e0f2fe' },
+  reduce_rows: { label: 'REDUCTION', color: '#7c3aed', bg: '#ede9fe' },
+  reduce_cols: { label: 'REDUCTION', color: '#7c3aed', bg: '#ede9fe' },
+  find_zeros: { label: 'MATCHING', color: '#059669', bg: '#d1fae5' },
+  cover_zeros: { label: 'COVERING', color: '#d97706', bg: '#fef3c7' },
+  find_delta: { label: 'ADJUSTMENT', color: '#ea580c', bg: '#ffedd5' },
+  adjust_matrix: { label: 'ADJUSTMENT', color: '#ea580c', bg: '#ffedd5' },
+  extract_pairs: { label: 'EXTRACTION', color: '#be123c', bg: '#ffe4e6' },
   complete: { label: 'DONE', color: '#047857', bg: '#d1fae5' },
-  infeasible: { label: 'FAILED', color: '#b91c1c', bg: '#fee2e2' },
 }
 
 export const StepInfo: React.FC<StepInfoProps> = ({ type, phaseTitle, description, totalScore }) => {

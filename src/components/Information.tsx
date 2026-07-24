@@ -8,6 +8,9 @@ interface InformationProps {
   optimal: OptimalResult
   greedyScore: number
   greedyMatched: number
+  hungarianScore: number
+  hungarianMatched: number
+  currentAlgorithm: 'hungarian' | 'greedy'
   onImport: (matrix: number[][]) => void
   showGradient: boolean
   onShowGradientChange: (v: boolean) => void
@@ -62,6 +65,9 @@ export const Information: React.FC<InformationProps> = ({
   optimal,
   greedyScore,
   greedyMatched,
+  hungarianScore,
+  hungarianMatched,
+  currentAlgorithm,
   onImport,
   showGradient,
   onShowGradientChange,
@@ -72,6 +78,9 @@ export const Information: React.FC<InformationProps> = ({
 
   const gap = optimal.totalScore - greedyScore
   const pct = optimal.totalScore > 0 ? Math.round((greedyScore / optimal.totalScore) * 100) : 100
+
+  const hGap = optimal.totalScore - hungarianScore
+  const hPct = optimal.totalScore > 0 ? Math.round((hungarianScore / optimal.totalScore) * 100) : 100
 
   const handleExport = () => {
     const payload = { n, matrix }
@@ -107,7 +116,7 @@ export const Information: React.FC<InformationProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {/* ---------- theoretical max score vs greedy ---------- */}
+      {/* ---------- theoretical max score ---------- */}
       <div style={{ ...cardStyle, display: 'flex', gap: 18, flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 180 }}>
           <div style={cardTitle}>THEORETICAL MAX SCORE (KM OPTIMUM)</div>
@@ -143,8 +152,36 @@ export const Information: React.FC<InformationProps> = ({
           </div>
         </div>
 
+        {/* ---------- hungarian result ---------- */}
         <div style={{ paddingLeft: 18, borderLeft: '1px solid var(--line)', minWidth: 170 }}>
-          <div style={cardTitle}>GREEDY RESULT</div>
+          <div style={cardTitle}>
+            HUNGARIAN {currentAlgorithm === 'hungarian' && '· CURRENT'}
+          </div>
+          <div
+            style={{
+              fontSize: 26,
+              fontWeight: 800,
+              fontVariantNumeric: 'tabular-nums',
+              color: hungarianScore > 0 ? 'var(--rose)' : 'var(--ink)',
+              lineHeight: 1.3,
+              marginTop: 6,
+            }}
+          >
+            {hungarianScore}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+            {hungarianMatched} / {n} pairs · {hPct}% of optimal
+          </div>
+          <div style={{ fontSize: 12, marginTop: 6, fontWeight: 600, color: hGap > 0 ? '#b45309' : '#047857' }}>
+            {hGap > 0 ? `Misses optimum by ${hGap}` : 'Reaches the optimum!'}
+          </div>
+        </div>
+
+        {/* ---------- greedy baseline ---------- */}
+        <div style={{ paddingLeft: 18, borderLeft: '1px solid var(--line)', minWidth: 170 }}>
+          <div style={cardTitle}>
+            GREEDY BASELINE {currentAlgorithm === 'greedy' && '· CURRENT'}
+          </div>
           <div
             style={{
               fontSize: 26,
@@ -161,7 +198,7 @@ export const Information: React.FC<InformationProps> = ({
             {greedyMatched} / {n} pairs · {pct}% of optimal
           </div>
           <div style={{ fontSize: 12, marginTop: 6, fontWeight: 600, color: gap > 0 ? '#b45309' : '#047857' }}>
-            {gap > 0 ? `Greedy leaves ${gap} points on the table` : 'Greedy reaches the optimum!'}
+            {gap > 0 ? `Leaves ${gap} points on the table` : 'Reaches the optimum!'}
           </div>
         </div>
       </div>
